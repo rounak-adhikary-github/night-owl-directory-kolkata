@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en-IN" data-theme="night">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Night Owl - Kolkata's after-midnight directory</title>
+<meta name="description" content="A dark-mode first, filterable map of 24/7 pharmacies, late-night food, open petrol pumps and safe transit pickup points in Kolkata. Sorts by nearest to you.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#121212">
+<meta name="author" content="Night Owl">
+<link rel="canonical" href="./index.html">
+
+<!-- Open Graph / share preview -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Night Owl - Kolkata's after-midnight directory">
+<meta property="og:description" content="Find a chemist, a roll counter, a petrol pump or a safe cab pickup after midnight in Kolkata.">
+<meta property="og:locale" content="en_IN">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23121212'/%3E%3Cpath d='M20 8a9 9 0 1 0 4 12A7.5 7.5 0 0 1 20 8z' fill='%23FFB74D'/%3E%3C/svg%3E">
+
+<!-- Leaflet from unpkg, pinned to 1.9.4 with SRI so a tampered CDN copy cannot run -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
+<!-- Only the marker-cluster animation rules are used; the bubbles are ours. -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+      integrity="sha256-YU3qCpj/P06tdPBJGPax0bm6Q1wltfwjsho5TR4+TYc=" crossorigin="anonymous">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<a class="skip-link" href="#list">Skip to the list of places</a>
+
+<!-- Basemap. Leaflet renders into this; everything else floats above it. -->
+<div id="map" class="map" role="region" aria-label="Map of late-night amenities across Kolkata"></div>
+<!-- Dimming veil: sits above the tiles, below the UI, so text stays crisp. -->
+<div class="veil" aria-hidden="true"></div>
+
+<!-- Map controls -->
+<div class="fabstack" role="group" aria-label="Map controls">
+  <button id="btn-layers" class="fab" type="button" aria-expanded="false" aria-controls="layer-menu" title="Choose basemap">
+    <svg viewBox="0 0 24 24" aria-hidden="true" class="ico"><path d="M12 3.5 3.5 8l8.5 4.5L20.5 8 12 3.5zM3.5 12.5 12 17l8.5-4.5M3.5 17 12 21.5l8.5-4.5"/></svg>
+    <span class="fab__label">Map style</span>
+  </button>
+  <div id="layer-menu" class="popover glass" hidden>
+    <p class="popover__title">Basemap</p>
+    <div class="segmented" role="radiogroup" aria-label="Basemap">
+      <button type="button" class="seg is-on" role="radio" aria-checked="true" data-layer="dark">
+        <span class="seg__swatch" style="--sw:#2b333d"></span>Night
+      </button>
+      <button type="button" class="seg" role="radio" aria-checked="false" data-layer="colour">
+        <span class="seg__swatch" style="--sw:#cfe3c9"></span>Colour
+      </button>
+      <button type="button" class="seg" role="radio" aria-checked="false" data-layer="satellite">
+        <span class="seg__swatch" style="--sw:#4a6b3a"></span>Satellite
+      </button>
+    </div>
+  </div>
+  <button id="btn-dim" class="fab" type="button" aria-pressed="false" title="Dim the map for very dark surroundings">
+    <svg viewBox="0 0 24 24" aria-hidden="true" class="ico"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+    <span class="fab__label">Dim map</span>
+  </button>
+  <button id="btn-locate" class="fab fab--accent" type="button" title="Sort the list by nearest to me">
+    <svg viewBox="0 0 24 24" aria-hidden="true" class="ico"><path d="M12 3v3.2M12 17.8V21M3 12h3.2M17.8 12H21"/><circle cx="12" cy="12" r="4.2"/></svg>
+    <span class="fab__label">Near me</span>
+  </button>
+</div>
+
+<!-- Attribution lives in the map chrome rather than a Leaflet control, so it stays visible above the sheet -->
+<p id="attribution" class="attrib"></p>
+
+<!-- The one panel: bottom sheet on phones, sidebar on desktop -->
+<section class="panel glass" id="panel" aria-label="Directory panel">
+  <button id="sheet-handle" class="handle" type="button" aria-expanded="false" aria-controls="panel-body"
+          title="Drag or tap to expand the list">
+    <span class="handle__bar" aria-hidden="true"></span>
+    <span class="sr-only">Expand or collapse the list</span>
+  </button>
+
+  <header class="brand">
+    <svg class="brand__owl" viewBox="0 0 32 32" aria-hidden="true" style="fill:var(--food)">
+      <path d="M20 6a9.5 9.5 0 1 0 4.2 12.7A7.8 7.8 0 0 1 20 6z"/>
+    </svg>
+    <div class="brand__text">
+      <h1>Night Owl <span class="brand__city">Kolkata</span></h1>
+      <p id="statusline" class="muted" aria-live="polite">Loading the night network&hellip;</p>
+    </div>
+    <button id="btn-collapse" class="iconbtn" type="button" aria-expanded="true" aria-controls="panel-body"
+            title="Collapse the panel">
+      <svg viewBox="0 0 24 24" aria-hidden="true" class="ico"><path d="M14.5 6 8.5 12l6 6"/></svg>
+      <span class="sr-only">Collapse the panel</span>
+    </button>
+  </header>
+
+  <div class="panel__body" id="panel-body">
+    <div class="searchrow">
+      <svg class="searchrow__ico ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
+      <input id="search" type="search" class="searchrow__input" placeholder="Search chemist, roll, pump, area&hellip;"
+             autocomplete="off" spellcheck="false" aria-label="Search places and areas">
+      <button id="btn-clear" class="searchrow__clear" type="button" hidden title="Clear search">
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="ico"><path d="M7 7l10 10M17 7 7 17"/></svg>
+        <span class="sr-only">Clear search</span>
+      </button>
+    </div>
+
+    <div class="chips" role="group" aria-label="Filter by category">
+      <button class="chip is-on" type="button" data-cat="all" aria-pressed="true">
+        <span class="chip__dot"></span>All
+      </button>
+      <button class="chip" type="button" data-cat="pharmacy" aria-pressed="false">
+        <span class="chip__dot"></span>24/7 pharmacy
+      </button>
+      <button class="chip" type="button" data-cat="food" aria-pressed="false">
+        <span class="chip__dot"></span>Late-night food
+      </button>
+      <button class="chip" type="button" data-cat="fuel" aria-pressed="false">
+        <span class="chip__dot"></span>Pump &amp; mechanic
+      </button>
+      <button class="chip" type="button" data-cat="transit" aria-pressed="false">
+        <span class="chip__dot"></span>Safe pickup
+      </button>
+      <button class="chip chip--toggle" id="btn-open" type="button" aria-pressed="false">
+        <span class="chip__dot chip__dot--pulse"></span>Open now
+      </button>
+    </div>
+
+    <div class="metarow">
+      <p id="count" class="metarow__count" aria-live="polite">Loading&hellip;</p>
+      <button id="btn-sort" class="sortbtn" type="button" hidden aria-pressed="false"
+              title="Sort by walking distance from your location">
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="ico"><path d="M4 7h13l-3-3M20 17H7l3 3"/></svg>
+        <span id="sort-label">Nearest first</span>
+      </button>
+    </div>
+
+    <ul id="list" class="cards"></ul>
+
+    <p id="notice" class="notice" hidden></p>
+
+    <footer class="legal">
+      <p id="coverage" class="legal__coverage">Sample data for demonstration.</p>
+      <p>Nothing here is ground-verified - <strong>verify before you ride</strong>. Timings drift, stalls move overnight.</p>
+      <p>
+        Rendered with <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a> and
+        <a href="https://github.com/Leaflet/Leaflet.markercluster" target="_blank" rel="noopener">Leaflet.markercluster</a>.
+        Basemap credits follow the chosen style, bottom-left of the map.
+      </p>
+      <p class="legal__hint">Press <kbd>/</kbd> to search &middot; <kbd>Esc</kbd> to clear.</p>
+    </footer>
+  </div>
+</section>
+
+<div id="toast" class="toast glass" role="status" aria-live="polite" hidden></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"
+        integrity="sha256-Hk4dIpcqOSb0hZjgyvFOP+cEmDXUKKNE/tT542ZbNQg=" crossorigin="anonymous"></script>
+<script src="assets/app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,1067 @@
+{
+  "type": "FeatureCollection",
+  "name": "night-owl-kolkata",
+  "license": "ODbL-1.0 (data), MIT (code)",
+  "disclaimer": "CURATED SEED ENTRIES for the Night Owl demo. Place names refer to real localities and landmarks in Kolkata, but the exact shop names, addresses, timings and details have NOT been verified on the ground. Phone numbers are deliberately absent: see README.",
+  "schema": {
+    "id": "string, stable slug (used for deep links and marker selection)",
+    "name": "string, place name",
+    "category": "pharmacy | food | fuel | transit",
+    "address": "string, human readable address",
+    "phone": "string, E.164-ish, optional",
+    "always": "boolean, true when open 24x7 (open/close ignored)",
+    "open": "HH:MM 24h local time, staffed opening time",
+    "close": "HH:MM 24h local time; a close earlier than open means the window wraps past midnight",
+    "closedDays": "array of ints, 0 = Sunday. omitted means all week",
+    "hours": "string, human readable hours for display",
+    "notes": "string, optional night-specific tip",
+    "safety": "string, optional, transit spots only",
+    "tags": "array of strings, extra search keywords",
+    "verified": "ISO date of last check, or null when unverified",
+    "source": "curated-seed | synthetic-fill. Nothing in this repo is field-verified."
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.352,
+          22.5535
+        ]
+      },
+      "properties": {
+        "id": "ph-01",
+        "name": "Apollo Pharmacy - Park Street",
+        "category": "pharmacy",
+        "address": "18B Park Street, beside Park Street Metro Gate 2",
+        "always": true,
+        "hours": "Open 24 hours",
+        "notes": "Night counter is at the rear entrance; card and UPI both work after midnight.",
+        "tags": [
+          "chemist",
+          "medicine",
+          "insulin",
+          "metro"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.432,
+          22.5735
+        ]
+      },
+      "properties": {
+        "id": "ph-02",
+        "name": "Nightingale Chemist & Druggist - Sector V",
+        "category": "pharmacy",
+        "address": "DN-51, Sector V, Bidhannagar",
+        "always": true,
+        "hours": "Open 24 hours",
+        "notes": "Busiest between 1 AM and 3 AM when the Sector V shifts change.",
+        "tags": [
+          "chemist",
+          "medicine",
+          "salt lake",
+          "tech park"
+        ],
+        "verified": null,
+        "source": "curated-seed",
+        "locality": "Salt Lake Sector V"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.351,
+          22.5626
+        ]
+      },
+      "properties": {
+        "id": "ph-03",
+        "name": "Frank Ross Pharmacy - Esplanade",
+        "category": "pharmacy",
+        "address": "5 Netaji Subhas Road, Esplanade",
+        "open": "08:00",
+        "close": "23:30",
+        "hours": "08:00 - 23:30 daily",
+        "notes": "Heritage dispensary, compounds late prescriptions if you ring the bell.",
+        "tags": [
+          "chemist",
+          "esplanade",
+          "dalhousie"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.365,
+          22.524
+        ]
+      },
+      "properties": {
+        "id": "ph-04",
+        "name": "Mitra Medical Hall - Ballygunge",
+        "category": "pharmacy",
+        "address": "62 Ballygunge Circular Road",
+        "always": true,
+        "hours": "Open 24 hours",
+        "notes": "Small counter, big stock. Ring the shutter bell if it looks shut.",
+        "tags": [
+          "chemist",
+          "medicine",
+          "ballygunge"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.465,
+          22.587
+        ]
+      },
+      "properties": {
+        "id": "ph-05",
+        "name": "Wellness Forever - New Town",
+        "category": "pharmacy",
+        "address": "Action Area I, New Town, near Axis Mall",
+        "always": true,
+        "hours": "Open 24 hours",
+        "notes": "Well-lit forecourt and CCTV; the safest late bet in New Town.",
+        "tags": [
+          "chemist",
+          "medicine",
+          "new town",
+          "rajarhat"
+        ],
+        "verified": null,
+        "source": "curated-seed",
+        "locality": "Rajarhat New Town"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.372,
+          22.5675
+        ]
+      },
+      "properties": {
+        "id": "ph-06",
+        "name": "Sealdah Station Chemist",
+        "category": "pharmacy",
+        "address": "Platform 1 side, Sealdah Station",
+        "always": true,
+        "hours": "Open 24 hours",
+        "notes": "Inside the station complex, so you may need a platform ticket at night.",
+        "tags": [
+          "chemist",
+          "medicine",
+          "station",
+          "sealdah"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.3425,
+          22.5845
+        ]
+      },
+      "properties": {
+        "id": "ph-07",
+        "name": "Howrah Night Pharmacy",
+        "category": "pharmacy",
+        "address": "Old Complex, Howrah Station",
+        "always": true,
+        "hours": "Open 24 hours",
+        "notes": "Between the taxi stand and the subway; ask for the night shutter.",
+        "tags": [
+          "chemist",
+          "medicine",
+          "station",
+          "howrah"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.318,
+          22.499
+        ]
+      },
+      "properties": {
+        "id": "ph-08",
+        "name": "Behala Chowrasta Chemist",
+        "category": "pharmacy",
+        "address": "12 Diamond Harbour Road, Behala",
+        "open": "07:00",
+        "close": "02:00",
+        "hours": "07:00 - 02:00 daily",
+        "notes": "Last of the southern corridor to shut: 2 AM, then it is Taratala or nothing.",
+        "tags": [
+          "chemist",
+          "medicine",
+          "behala",
+          "dh road"
+        ],
+        "verified": null,
+        "source": "curated-seed",
+        "locality": "Behala Chowrasta"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.369,
+          22.518
+        ]
+      },
+      "properties": {
+        "id": "ph-09",
+        "name": "Gariahat 24x7 Medical Store",
+        "category": "pharmacy",
+        "address": "45A Gariahat Road, near Gariahat crossing",
+        "always": true,
+        "hours": "Open 24 hours",
+        "notes": "Accepts UPI only after 1 AM; keep some change as backup.",
+        "tags": [
+          "chemist",
+          "medicine",
+          "gariahat"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.3495,
+          22.5675
+        ]
+      },
+      "properties": {
+        "id": "fd-01",
+        "name": "Dacres Lane Night Kitchens",
+        "category": "food",
+        "address": "James Hickey Sarani, Esplanade",
+        "always": false,
+        "open": "17:00",
+        "close": "05:00",
+        "hours": "17:00 - 05:00 daily",
+        "notes": "Chowmein, toast-butter and chai right through the small hours. Cash preferred.",
+        "tags": [
+          "street food",
+          "chowmein",
+          "chai",
+          "esplanade",
+          "cheap"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.3512,
+          22.5545
+        ]
+      },
+      "properties": {
+        "id": "fd-02",
+        "name": "Kusum Rolls",
+        "category": "food",
+        "address": "17 Park Street, near Music World",
+        "always": false,
+        "open": "11:00",
+        "close": "04:00",
+        "hours": "11:00 - 04:00 daily",
+        "notes": "Peak queue after 2 AM. Egg-chicken roll is the standard order.",
+        "tags": [
+          "rolls",
+          "kathi roll",
+          "park street",
+          "late"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.3555,
+          22.582
+        ]
+      },
+      "properties": {
+        "id": "fd-03",
+        "name": "Tiretti Bazaar Dawn Stalls",
+        "category": "food",
+        "address": "Tiretti Bazaar, Poddar Court",
+        "always": false,
+        "open": "04:00",
+        "close": "10:00",
+        "hours": "04:00 - 10:00 daily",
+        "notes": "Opens at 4 AM - the closest thing to breakfast if your shift ends at 3:30 AM.",
+        "tags": [
+          "breakfast",
+          "dumplings",
+          "chinese",
+          "dawn",
+          "tiretti"
+        ],
+        "verified": null,
+        "source": "curated-seed",
+        "locality": "Burrabazar"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.369,
+          22.5395
+        ]
+      },
+      "properties": {
+        "id": "fd-04",
+        "name": "Zeeshan",
+        "category": "food",
+        "address": "20 Syed Amir Ali Avenue, Park Circus",
+        "always": false,
+        "open": "11:00",
+        "close": "03:30",
+        "hours": "11:00 - 03:30 daily",
+        "notes": "Biriyani and rolls till 3:30 AM - the exact hour a late shift finishes.",
+        "tags": [
+          "biriyani",
+          "rolls",
+          "park circus",
+          "mughlai"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.3645,
+          22.5255
+        ]
+      },
+      "properties": {
+        "id": "fd-05",
+        "name": "Arsalan - Ballygunge",
+        "category": "food",
+        "address": "63/1A Rashbehari Avenue, Ballygunge",
+        "always": false,
+        "open": "11:30",
+        "close": "03:30",
+        "hours": "11:30 - 03:30 daily",
+        "notes": "Kebabs and biriyani; the counter move is fastest after 1 AM.",
+        "tags": [
+          "biriyani",
+          "kebab",
+          "ballygunge",
+          "mughlai"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.3585,
+          22.5665
+        ]
+      },
+      "properties": {
+        "id": "fd-06",
+        "name": "Sabir's Hotel",
+        "category": "food",
+        "address": "Chandni Chowk, near Central Metro",
+        "always": false,
+        "open": "12:00",
+        "close": "04:00",
+        "hours": "12:00 - 04:00 daily",
+        "notes": "Old-school mutton stew and paratha. Tiny place, big reputation.",
+        "tags": [
+          "stew",
+          "paratha",
+          "chandni",
+          "old school"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.352,
+          22.5585
+        ]
+      },
+      "properties": {
+        "id": "fd-07",
+        "name": "Kalika Sandwich & Rolls",
+        "category": "food",
+        "address": "Hogg Street, New Market",
+        "always": false,
+        "open": "10:00",
+        "close": "02:30",
+        "hours": "10:00 - 02:30 daily",
+        "notes": "Toast, omelette and chai. Closes early compared with its Park Street cousins.",
+        "tags": [
+          "sandwich",
+          "toast",
+          "new market",
+          "chai"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.353,
+          22.553
+        ]
+      },
+      "properties": {
+        "id": "fd-08",
+        "name": "Paradise - Park Street",
+        "category": "food",
+        "address": "21 Park Street",
+        "always": false,
+        "open": "11:00",
+        "close": "04:00",
+        "hours": "11:00 - 04:00 daily",
+        "notes": "Roll counter stays lit long after the restaurant shutters.",
+        "tags": [
+          "rolls",
+          "park street",
+          "quick"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.39,
+          22.548
+        ]
+      },
+      "properties": {
+        "id": "fd-09",
+        "name": "Tangra China Town Night Kitchens",
+        "category": "food",
+        "address": "24 New China Bazar Road, Tangra",
+        "always": false,
+        "open": "18:00",
+        "close": "04:00",
+        "hours": "18:00 - 04:00 daily",
+        "notes": "Sit-down Hakka kitchens; several stay open for the late shift crowd.",
+        "tags": [
+          "chinese",
+          "hakka",
+          "tangra",
+          "sit down"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.433,
+          22.574
+        ]
+      },
+      "properties": {
+        "id": "fd-10",
+        "name": "Sector V Night Canteen",
+        "category": "food",
+        "address": "Behind the Wipro gate, Sector V",
+        "always": false,
+        "open": "20:00",
+        "close": "06:00",
+        "hours": "20:00 - 06:00 daily",
+        "notes": "Built for the night shift: paratha, egg curry and filter coffee at 4 AM.",
+        "tags": [
+          "canteen",
+          "night shift",
+          "sector v",
+          "coffee"
+        ],
+        "verified": null,
+        "source": "curated-seed",
+        "locality": "Salt Lake Sector V"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.336,
+          22.556
+        ]
+      },
+      "properties": {
+        "id": "fd-11",
+        "name": "Princep Ghat Tea & Maggi Stalls",
+        "category": "food",
+        "address": "Strand Road, Princep Ghat",
+        "always": false,
+        "open": "16:00",
+        "close": "04:00",
+        "hours": "16:00 - 04:00 daily",
+        "notes": "Bench seating by the river, lit until around 4 AM. Good place to wait out a cab.",
+        "tags": [
+          "tea",
+          "chai",
+          "maggi",
+          "river",
+          "princep ghat"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.348,
+          22.542
+        ]
+      },
+      "properties": {
+        "id": "fu-01",
+        "name": "IndianOil - A.J.C. Bose Road",
+        "category": "fuel",
+        "address": "120 A.J.C. Bose Road, near Rabindra Sadan",
+        "always": true,
+        "hours": "Open 24 hours",
+        "notes": "Air and tyre inflator on the far side; attended all night.",
+        "tags": [
+          "petrol",
+          "diesel",
+          "air",
+          "indianoil"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.395,
+          22.592
+        ]
+      },
+      "properties": {
+        "id": "fu-02",
+        "name": "HP Petrol Pump - Ultadanga",
+        "category": "fuel",
+        "address": "Ultadanga Main Road, near the Hudco crossing",
+        "always": true,
+        "hours": "Open 24 hours",
+        "notes": "Bright forecourt; the safest fill-up point on the north-east corridor.",
+        "tags": [
+          "petrol",
+          "diesel",
+          "ultadanga",
+          "hp"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.402,
+          22.54
+        ]
+      },
+      "properties": {
+        "id": "fu-03",
+        "name": "Bharat Petroleum - EM Bypass",
+        "category": "fuel",
+        "address": "EM Bypass, opposite Science City",
+        "always": true,
+        "hours": "Open 24 hours",
+        "notes": "Easy in-and-out from the bypass, useful when you are low after a long drive.",
+        "tags": [
+          "petrol",
+          "diesel",
+          "bypass",
+          "science city"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.348,
+          22.585
+        ]
+      },
+      "properties": {
+        "id": "fu-04",
+        "name": "IndianOil - Strand Road",
+        "category": "fuel",
+        "address": "8 Strand Road, Howrah bridge approach",
+        "always": true,
+        "hours": "Open 24 hours",
+        "notes": "Last pump before the bridge on the Kolkata side.",
+        "tags": [
+          "petrol",
+          "diesel",
+          "strand road",
+          "howrah"
+        ],
+        "verified": null,
+        "source": "curated-seed",
+        "locality": "Burrabazar"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.315,
+          22.501
+        ]
+      },
+      "properties": {
+        "id": "fu-05",
+        "name": "HP Petrol Pump - Behala Chowrasta",
+        "category": "fuel",
+        "address": "Diamond Harbour Road, Behala Chowrasta",
+        "open": "05:00",
+        "close": "01:00",
+        "hours": "05:00 - 01:00 daily",
+        "notes": "Shuts at 1 AM sharp - the southernmost gap in the night network.",
+        "tags": [
+          "petrol",
+          "diesel",
+          "behala"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.439,
+          22.64
+        ]
+      },
+      "properties": {
+        "id": "fu-06",
+        "name": "IndianOil - VIP Road Airport",
+        "category": "fuel",
+        "address": "VIP Road, near Airport Gate 1",
+        "always": true,
+        "hours": "Open 24 hours",
+        "notes": "The go-to for airport drop-offs at 3 AM; card payment works.",
+        "tags": [
+          "petrol",
+          "diesel",
+          "airport",
+          "vip road"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.372,
+          22.5385
+        ]
+      },
+      "properties": {
+        "id": "fu-07",
+        "name": "Night Owl Tyre & Puncture",
+        "category": "fuel",
+        "address": "4 Suhrawardy Avenue, Park Circus",
+        "open": "21:00",
+        "close": "06:00",
+        "hours": "21:00 - 06:00 daily",
+        "notes": "Puncture repair, jump-start and tow hook-up. Call before you roll in.",
+        "tags": [
+          "mechanic",
+          "tyre",
+          "puncture",
+          "tow",
+          "park circus"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.4,
+          22.57
+        ]
+      },
+      "properties": {
+        "id": "fu-08",
+        "name": "Rajdhani Motor Works",
+        "category": "fuel",
+        "address": "61 Beleghata Main Road",
+        "open": "09:00",
+        "close": "21:00",
+        "hours": "09:00 - 21:00, closed Sunday",
+        "closedDays": [
+          0
+        ],
+        "notes": "Daytime workshop only. Listed so you know it is closed at 3 AM.",
+        "tags": [
+          "mechanic",
+          "garage",
+          "beleghata",
+          "daytime"
+        ],
+        "verified": null,
+        "source": "curated-seed",
+        "locality": "Beliaghata"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.342,
+          22.5835
+        ]
+      },
+      "properties": {
+        "id": "tr-01",
+        "name": "Howrah Station - Prepaid Taxi Stand",
+        "category": "transit",
+        "address": "Howrah Station forecourt, outside the Old Complex",
+        "always": true,
+        "hours": "Open 24 hours",
+        "safety": "Lit forecourt, prepaid counter and a police kiosk within 50 m. Prefer prepaid over flagged cabs at night.",
+        "tags": [
+          "taxi",
+          "prepaid",
+          "pickup",
+          "howrah"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.3715,
+          22.5685
+        ]
+      },
+      "properties": {
+        "id": "tr-02",
+        "name": "Sealdah - North Gate Auto Stand",
+        "category": "transit",
+        "address": "Sealdah Station North Gate",
+        "always": true,
+        "hours": "Open 24 hours",
+        "safety": "Shared autos and metered taxis queue here all night; the gate has continuous CCTV.",
+        "tags": [
+          "auto",
+          "taxi",
+          "pickup",
+          "sealdah"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.369,
+          22.599
+        ]
+      },
+      "properties": {
+        "id": "tr-03",
+        "name": "Shyambazar 5-Point Auto Stand",
+        "category": "transit",
+        "address": "Shyambazar 5-point crossing",
+        "always": true,
+        "hours": "Open 24 hours",
+        "safety": "Street lamps on all five arms and a busy crossing even at 3 AM.",
+        "tags": [
+          "auto",
+          "pickup",
+          "shyambazar",
+          "north"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.447,
+          22.654
+        ]
+      },
+      "properties": {
+        "id": "tr-04",
+        "name": "Airport Gate 3 - App Cab Zone",
+        "category": "transit",
+        "address": "NSCBI Airport, Gate 3, VIP Road",
+        "always": true,
+        "hours": "Open 24 hours",
+        "safety": "Designated app-cab bay with security staff; matches your booking PIN before boarding.",
+        "tags": [
+          "cab",
+          "airport",
+          "pickup",
+          "gate 3"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.351,
+          22.554
+        ]
+      },
+      "properties": {
+        "id": "tr-05",
+        "name": "Park Street Metro - Exit 2 Cab Point",
+        "category": "transit",
+        "address": "Park Street Metro Exit 2, Chowringhee Road",
+        "open": "05:30",
+        "close": "23:45",
+        "hours": "05:30 - 23:45 daily",
+        "notes": "Metro shuts around 22:45; the cab point thins out well before midnight.",
+        "safety": "On the main road with a lit footpath, but sparse after 1 AM.",
+        "tags": [
+          "cab",
+          "metro",
+          "pickup",
+          "park street"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.43,
+          22.572
+        ]
+      },
+      "properties": {
+        "id": "tr-06",
+        "name": "Sector V - Wipro Gate Cab Bay",
+        "category": "transit",
+        "address": "Sector V, outside Wipro Gate 2",
+        "open": "20:00",
+        "close": "08:00",
+        "hours": "20:00 - 08:00 daily",
+        "notes": "Shift-change cab bay. Cabs are usually waiting between 2 AM and 4 AM.",
+        "safety": "Guard post at the gate, floodlights over the bay, and a shared log of cab numbers.",
+        "tags": [
+          "cab",
+          "night shift",
+          "pickup",
+          "sector v"
+        ],
+        "verified": null,
+        "source": "curated-seed",
+        "locality": "Salt Lake Sector V"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.348,
+          22.499
+        ]
+      },
+      "properties": {
+        "id": "tr-07",
+        "name": "Tollygunge Metro - Night Auto Stand",
+        "category": "transit",
+        "address": "Tollygunge Metro station road",
+        "open": "05:00",
+        "close": "23:00",
+        "hours": "05:00 - 23:00 daily",
+        "safety": "Stand is empty after 11 PM; use the tram depot side instead.",
+        "tags": [
+          "auto",
+          "metro",
+          "tollygunge",
+          "pickup"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.35,
+          22.564
+        ]
+      },
+      "properties": {
+        "id": "tr-08",
+        "name": "Esplanade - Police Kiosk Pickup Point",
+        "category": "transit",
+        "address": "Esplanade Bus Terminus, Curzon Park side",
+        "always": true,
+        "hours": "Open 24 hours",
+        "safety": "Staffed police kiosk and an ambulance bay. Best anchor point in central Kolkata at night.",
+        "tags": [
+          "police",
+          "kiosk",
+          "pickup",
+          "esplanade",
+          "safe"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          88.418,
+          22.586
+        ]
+      },
+      "properties": {
+        "id": "tr-09",
+        "name": "Karunamoyee Bus Stand",
+        "category": "transit",
+        "address": "Karunamoyee, Salt Lake City",
+        "always": true,
+        "hours": "Open 24 hours",
+        "safety": "Night buses and autos leave from the lit island platform; a police van is usually parked nearby.",
+        "tags": [
+          "bus",
+          "auto",
+          "salt lake",
+          "pickup"
+        ],
+        "verified": null,
+        "source": "curated-seed"
+      }
+    }
+  ]
+}
