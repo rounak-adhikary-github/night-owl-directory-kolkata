@@ -839,7 +839,7 @@ body.is-dragging .attrib { transition: none; }
   cursor: pointer;
 }
 
-/* --- legal / attribution --- */
+/* --- keyboard hint --- */
 .legal {
   flex: none;
   padding: 10px 2px 12px;
@@ -848,9 +848,6 @@ body.is-dragging .attrib { transition: none; }
   line-height: 1.5;
   color: var(--text-3);
 }
-.legal strong { color: var(--text-2); font-weight: 600; }
-.legal__coverage { color: var(--text-2); }
-.legal__coverage b { color: var(--food); font-weight: 600; font-variant-numeric: tabular-nums; }
 .legal a { color: var(--text-2); }
 .legal code, .notice code {
   font: inherit;
@@ -859,7 +856,7 @@ body.is-dragging .attrib { transition: none; }
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-2);
 }
-.legal__hint { margin-top: 4px; }
+.legal__hint { margin: 0; }
 .legal kbd {
   font: inherit;
   padding: 0 4px;

@@ -650,33 +650,6 @@ function renderStatusline() {
     (unknown ? `, <span class="mono">${unknown}</span> with hours unlisted` : '') + near;
 }
 
-/**
- * State the size and shape of the dataset, straight from its own metadata - and
- * state where the data comes from and how stale it can be. Nothing here is a
- * coverage promise: the counts are what the file actually contains.
- */
-function renderCoverageNote(data) {
-  const el = $('#coverage');
-  if (!el) return;
-  const meta = data.metadata || {};
-  const counts = meta.counts || {};
-  const osm = (meta.dataSources || []).find((s) => s.id === 'openstreetmap') || {};
-  const total = counts.total || state.features.length;
-
-  const bits = [`<b>${total}</b> real places`];
-  if (counts.neighbourhoods) bits.push(`across <b>${counts.neighbourhoods}</b> neighbourhoods`);
-  if (counts.open24h) bits.push(`<b>${counts.open24h}</b> open 24 hours`);
-  if (counts.openAtNightRef) bits.push(`<b>${counts.openAtNightRef}</b> open at 03:30`);
-  if (counts.hoursUnknown) bits.push(`<b>${counts.hoursUnknown}</b> with hours unmapped`);
-  if (counts.namesUnmapped) bits.push(`<b>${counts.namesUnmapped}</b> whose name is not mapped`);
-
-  el.innerHTML = `${bits.join(' &middot; ')}. ` +
-    `Every place is drawn from <a href="${osm.url || 'https://www.openstreetmap.org/'}" target="_blank" ` +
-    `rel="noopener">${osm.attribution || 'OpenStreetMap'}</a>` +
-    (osm.fetched ? `, fetched ${osm.fetched}` : '') +
-    `; hours are only as current as the last mapper to stand in front of the door.`;
-}
-
 function showNotice(html) {
   const el = $('#notice');
   el.innerHTML = html;
@@ -1054,7 +1027,6 @@ async function boot() {
   }
 
   setLayer('dark');
-  renderCoverageNote(data);
   render();
   measurePeek();
 

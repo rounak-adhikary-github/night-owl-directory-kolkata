@@ -58,7 +58,8 @@ run resumes, and refuses to cache an empty result that is really a mirror giving
 coordinate or an hour.
 
 Data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright),
-available under the ODbL. Attribution is in the app footer and on every popup.
+available under the ODbL. Attribution sits in the map's own credit line (bottom-left,
+where the basemap credits follow the chosen style) and on every popup's data row.
 Fetched **2026-09-21**.
 
 ### Why not Google
