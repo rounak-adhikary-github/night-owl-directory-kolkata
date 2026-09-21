@@ -1,0 +1,8 @@
+# Per-category Overpass cache. Regenerable at any time with
+# `node tools/fetch-osm.mjs`, and ~500 KB of intermediate JSON that has no place in
+# the published site. tools/osm-source.json (the compact extract the build reads) IS
+# committed, so the build stays reproducible offline.
+tools/osm-raw/
+
+# Scratch scripts, not part of the pipeline.
+tools/_*.mjs

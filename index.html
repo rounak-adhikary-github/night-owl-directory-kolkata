@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Night Owl - Kolkata's after-midnight directory</title>
-<meta name="description" content="A dark-mode first, filterable map of 24/7 pharmacies, late-night food, open petrol pumps and safe transit pickup points in Kolkata. Sorts by nearest to you.">
+<meta name="description" content="A dark-mode first, filterable map of 24/7 pharmacies, late-night food, open petrol pumps and late-night transit pickups in Kolkata, built from real OpenStreetMap places. Sorts by nearest to you.">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#121212">
 <meta name="author" content="Night Owl">
@@ -116,7 +116,7 @@
         <span class="chip__dot"></span>Pump &amp; mechanic
       </button>
       <button class="chip" type="button" data-cat="transit" aria-pressed="false">
-        <span class="chip__dot"></span>Safe pickup
+        <span class="chip__dot"></span>Transit pickup
       </button>
       <button class="chip chip--toggle" id="btn-open" type="button" aria-pressed="false">
         <span class="chip__dot chip__dot--pulse"></span>Open now
@@ -137,8 +137,10 @@
     <p id="notice" class="notice" hidden></p>
 
     <footer class="legal">
-      <p id="coverage" class="legal__coverage">Sample data for demonstration.</p>
-      <p>Nothing here is ground-verified - <strong>verify before you ride</strong>. Timings drift, stalls move overnight.</p>
+      <p id="coverage" class="legal__coverage">Loading the dataset summary&hellip;</p>
+      <p>Place data <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">&copy; OpenStreetMap contributors</a>,
+         available under the ODbL. Hours are volunteered and <strong>drift</strong> -
+         treat every status here as a lead, not a promise.</p>
       <p>
         Rendered with <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a> and
         <a href="https://github.com/Leaflet/Leaflet.markercluster" target="_blank" rel="noopener">Leaflet.markercluster</a>.

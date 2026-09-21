@@ -239,6 +239,8 @@ body.is-dimmed .leaflet-tile { filter: brightness(0.78) saturate(0.9); }
 
 .mk.is-closed .mk__dot { opacity: 0.55; border-color: rgba(255, 255, 255, 0.18); color: var(--text-2); }
 .mk.is-closed .mk__badge { display: block; }
+/* Unknown hours: readable but clearly not asserting anything about being open. */
+.mk.is-unknown .mk__dot { opacity: 0.78; border-color: rgba(255, 255, 255, 0.28); }
 .mk__badge {
   display: none;
   position: absolute; right: 8px; bottom: 8px;
@@ -331,6 +333,9 @@ a.leaflet-popup-close-button { border-radius: var(--r-md); }
   background: var(--c); box-shadow: 0 0 10px -1px var(--c);
 }
 .pop__name { margin-top: 4px; font-size: 16px; font-weight: 600; line-height: 1.25; }
+/* A place OpenStreetMap knows the position of but never gave a name: worth
+   listing, and honest about the gap rather than dressed up as a brand. */
+.pop__name--unmapped { font-weight: 500; font-style: italic; color: var(--text-2); }
 .pop__addr { margin-top: 4px; font-size: 13px; color: var(--text-2); }
 .pop__meta {
   margin-top: 10px; padding-top: 10px;
@@ -341,7 +346,11 @@ a.leaflet-popup-close-button { border-radius: var(--r-md); }
 .pop__row { display: flex; gap: 8px; align-items: flex-start; }
 .pop__row b { color: var(--text); font-weight: 600; }
 .pop__note { color: var(--text-2); font-size: 12.5px; }
-.pop__actions { display: flex; gap: 8px; margin-top: 12px; }
+/* Provenance line: smaller and dimmer than the facts above it, but never hidden - it
+   is the thing that tells the reader how much to trust the row above. */
+.pop__data { color: var(--text-3); font-size: 11.5px; }
+.pop__data b { color: var(--text-3); font-weight: 600; }
+.pop__actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
 .pop__actions a {
   flex: 1;
   min-height: var(--tap);
@@ -760,6 +769,7 @@ body.is-dragging .attrib { transition: none; }
   color: var(--text);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
+.card__name--unmapped { font-weight: 500; font-style: italic; color: var(--text-2); }
 .card__dist {
   flex: none;
   font-size: 12.5px; font-weight: 600;
@@ -784,6 +794,8 @@ body.is-dragging .attrib { transition: none; }
 .status--open   { color: var(--pharmacy); background: rgba(129, 199, 132, 0.12); border-color: rgba(129, 199, 132, 0.4); }
 .status--soon   { color: var(--food);     background: rgba(255, 183, 77, 0.12);  border-color: rgba(255, 183, 77, 0.4); }
 .status--closed { color: var(--danger);   background: rgba(229, 115, 115, 0.12); border-color: rgba(229, 115, 115, 0.4); }
+/* Neither open nor closed: the hours were never mapped, or are too complex to read. */
+.status--unknown { color: var(--text-2);  background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.18); }
 
 .card__hours { font-size: 11.5px; color: var(--text-3); }
 

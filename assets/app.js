@@ -24,7 +24,10 @@ const CATS = {
   pharmacy: { label: '24/7 pharmacy', plural: 'pharmacies', color: '#81C784', icon: ICONS.pharmacy },
   food:     { label: 'Late-night food', plural: 'food spots', color: '#FFB74D', icon: ICONS.food },
   fuel:     { label: 'Petrol & mechanic', plural: 'pumps & mechanics', color: '#4DD0E1', icon: ICONS.fuel },
-  transit:  { label: 'Safe transit pickup', plural: 'safe pickup points', color: '#B39DDB', icon: ICONS.transit }
+  // Named "transit pickup", not "safe transit pickup": every entry is a real, lit
+  // piece of transport infrastructure (a metro or rail station, a bus terminus, a
+  // taxi stand), and the data behind it says where it is - not that it is safe.
+  transit:  { label: 'Transit pickup', plural: 'transit pickup points', color: '#B39DDB', icon: ICONS.transit }
 };
 
 /* Tile sources.
@@ -138,21 +141,41 @@ function latLngOf(f) {
 
 /**
  * Is this place open right now?
+ *
+ * Three outcomes, and the third one is the point: a place whose hours were never
+ * mapped, or whose mapped hours use a shape this app cannot read (split shifts,
+ * sunset-relative), comes back "unknown" rather than "closed". Guessing either
+ * sends someone to a shutter that is down or hides a shop that is open.
+ *
  * A close time earlier than the open time means the window wraps past midnight
  * (the whole point of this app), so the comparison flips.
  */
 function openState(props, now = new Date()) {
   const kind = (open, status, label) => ({ open, status, label });
 
-  if (props.closedDays && props.closedDays.includes(now.getDay())) {
-    return kind(false, 'closed', 'Closed today');
-  }
   if (props.always) return kind(true, 'open', 'Open 24 hours');
+
+  // A hospital's casualty department does not close, whether or not the mapper
+  // recorded the hours of its outpatient block. Kept out of the hours fields and in
+  // its own flag, so the card can say exactly what is known and what is not.
+  if (props.overnight) return kind(true, 'open', 'Casualty open all night');
+
+  if (props.open == null || props.close == null) {
+    return kind(null, 'unknown', props.rawHours ? 'See hours' : 'Hours not listed');
+  }
 
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const openMin = toMinutes(props.open);
   const closeMin = toMinutes(props.close);
   const wraps = closeMin <= openMin;
+
+  // A window that wrapped past midnight is still running in the small hours, so a
+  // place closed on Sundays but open till 02:00 is open at 01:00 on Monday.
+  const inWrappedTail = wraps && nowMin < closeMin;
+  if (!inWrappedTail && props.closedDays && props.closedDays.includes(now.getDay())) {
+    return kind(false, 'closed', 'Closed today');
+  }
+
   const isOpen = wraps
     ? nowMin >= openMin || nowMin < closeMin
     : nowMin >= openMin && nowMin < closeMin;
@@ -281,7 +304,10 @@ function markerHtml(f, active) {
   const p = f.properties;
   const cat = CATS[p.category] || CATS.food;
   const st = openState(p);
-  return `<div class="mk${active ? ' is-active' : ''} ${st.open ? 'is-open' : 'is-closed'}"
+  // Three states on the map as well: an unknown-hours pin is neither lit as open
+  // nor struck through as shut.
+  const lit = st.open ? 'is-open' : (st.status === 'unknown' ? 'is-unknown' : 'is-closed');
+  return `<div class="mk${active ? ' is-active' : ''} ${lit}"
                style="--c:${cat.color}">
             <span class="mk__halo"></span>
             <span class="mk__dot">${cat.icon}<span class="mk__badge"></span></span>
@@ -406,6 +432,24 @@ function openPopup(f) {
   }
 }
 
+/**
+ * Where a record came from, in plain words. A directory built on volunteered data
+ * should say whose data it is - all the more so when the hours are missing, which
+ * is the state that gets read as "open" when it is nothing of the kind.
+ */
+function provenanceOf(p) {
+  const bits = ['OpenStreetMap'];
+  if (p.osmEdited) bits.push(`mapped ${p.osmEdited}`);
+  if (p.nameUnmapped) bits.push('name not mapped');
+  // "No hours" and "hours I could not read" are different admissions, and the card
+  // shows a different status for each ("Hours not listed" vs "See hours"), so the
+  // provenance line cannot collapse them into one phrase.
+  if (p.overnight && !p.hoursKnown) bits.push('casualty hours not mapped');
+  else if (!p.hoursKnown && p.rawHours) bits.push('hours mapped but not machine-readable');
+  else if (!p.hoursKnown) bits.push('no hours mapped');
+  return bits.join(' &middot; ');
+}
+
 function popupHtml(f) {
   const p = f.properties;
   const cat = CATS[p.category] || CATS.food;
@@ -423,10 +467,11 @@ function popupHtml(f) {
   }
   if (p.safety) rows.push(`<div class="pop__row"><b>Safety</b><span>${esc(p.safety)}</span></div>`);
   if (p.notes) rows.push(`<div class="pop__row pop__note">${esc(p.notes)}</div>`);
+  rows.push(`<div class="pop__row pop__data"><b>Data</b><span>${provenanceOf(p)}</span></div>`);
 
   return `<div class="pop" style="--c:${cat.color}">
-    <span class="pop__cat">${cat.label}</span>
-    <h3 class="pop__name">${esc(p.name)}</h3>
+    <span class="pop__cat">${esc(p.subtypeLabel || cat.label)}</span>
+    <h3 class="pop__name${p.nameUnmapped ? ' pop__name--unmapped' : ''}">${esc(p.name)}</h3>
     <p class="pop__addr">${esc(p.address)}</p>
     <div class="pop__meta">${rows.join('')}</div>
     <div class="pop__actions">
@@ -434,6 +479,8 @@ function popupHtml(f) {
         Directions
       </a>
       ${p.phone ? `<a href="tel:${esc(p.phone.replace(/\s/g, ''))}">Call</a>` : ''}
+      ${p.osmId ? `<a href="https://www.openstreetmap.org/${esc(p.osmId)}" target="_blank"
+                     rel="noopener" title="Open this place's record on OpenStreetMap">OSM entry</a>` : ''}
     </div>
   </div>`;
 }
@@ -449,8 +496,9 @@ function matches(f) {
   if (state.category !== 'all' && p.category !== state.category) return false;
   if (state.openOnly && !openState(p).open) return false;
   if (state.query) {
-    const hay = [p.name, p.address, p.locality, p.hours, p.notes, p.safety,
-                (p.tags || []).join(' '), (CATS[p.category] || {}).label].join(' ').toLowerCase();
+    const hay = [p.name, p.address, p.locality, p.hours, p.rawHours, p.notes, p.safety,
+                p.subtypeLabel, (p.tags || []).join(' '), (CATS[p.category] || {}).label]
+      .join(' ').toLowerCase();
     if (!state.query.split(/\s+/).every((token) => hay.includes(token))) return false;
   }
   return true;
@@ -542,7 +590,7 @@ function appendCards(from, to) {
       <span class="card__badge">${cat.icon}</span>
       <span class="card__main">
         <span class="card__top">
-          <span class="card__name">${esc(p.name)}</span>
+          <span class="card__name${p.nameUnmapped ? ' card__name--unmapped' : ''}">${esc(p.name)}</span>
           ${km != null ? `<span class="card__dist">${fmtDistance(km)}</span>` : ''}
         </span>
         <span class="card__addr">${esc(p.address)}</span>
@@ -590,25 +638,43 @@ function renderCount() {
 function renderStatusline() {
   const now = new Date();
   const openCount = state.features.filter((f) => openState(f.properties, now).open).length;
+  // Counting the unlistable separately keeps the headline honest: the rest of the
+  // number is places that are definitely not open, not places we cannot tell about.
+  const unknown = state.features.filter((f) => openState(f.properties, now).status === 'unknown').length;
   const near = state.user
     ? (state.userDistanceKm > 80 ? ' &middot; you are far from Kolkata' : ' &middot; location on')
     : '';
   $('#statusline').innerHTML =
     `<span class="mono">${fmtClock(now.getHours() * 60 + now.getMinutes())}</span> &middot; ` +
-    `${openCount} of ${state.features.length} open right now${near}`;
+    `${openCount} of ${state.features.length} open right now` +
+    (unknown ? `, <span class="mono">${unknown}</span> with hours unlisted` : '') + near;
 }
 
-/** State the size and shape of the dataset, straight from its own metadata. */
+/**
+ * State the size and shape of the dataset, straight from its own metadata - and
+ * state where the data comes from and how stale it can be. Nothing here is a
+ * coverage promise: the counts are what the file actually contains.
+ */
 function renderCoverageNote(data) {
   const el = $('#coverage');
   if (!el) return;
-  const counts = data.counts || {};
-  const night = data.nightCoverage || {};
+  const meta = data.metadata || {};
+  const counts = meta.counts || {};
+  const osm = (meta.dataSources || []).find((s) => s.id === 'openstreetmap') || {};
   const total = counts.total || state.features.length;
-  const localities = counts.localities || night.localitiesTotal;
-  const openAtNight = night.openAtReference;
-  el.innerHTML = `<b>${total}</b> demo places across <b>${localities}</b> Kolkata localities` +
-    (openAtNight ? ` &middot; <b>${openAtNight}</b> open at 03:30 AM, at least two in every locality` : '');
+
+  const bits = [`<b>${total}</b> real places`];
+  if (counts.neighbourhoods) bits.push(`across <b>${counts.neighbourhoods}</b> neighbourhoods`);
+  if (counts.open24h) bits.push(`<b>${counts.open24h}</b> open 24 hours`);
+  if (counts.openAtNightRef) bits.push(`<b>${counts.openAtNightRef}</b> open at 03:30`);
+  if (counts.hoursUnknown) bits.push(`<b>${counts.hoursUnknown}</b> with hours unmapped`);
+  if (counts.namesUnmapped) bits.push(`<b>${counts.namesUnmapped}</b> whose name is not mapped`);
+
+  el.innerHTML = `${bits.join(' &middot; ')}. ` +
+    `Every place is drawn from <a href="${osm.url || 'https://www.openstreetmap.org/'}" target="_blank" ` +
+    `rel="noopener">${osm.attribution || 'OpenStreetMap'}</a>` +
+    (osm.fetched ? `, fetched ${osm.fetched}` : '') +
+    `; hours are only as current as the last mapper to stand in front of the door.`;
 }
 
 function showNotice(html) {

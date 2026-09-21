@@ -1,293 +1,189 @@
-# Night Owl - Kolkata
+# Night Owl · Kolkata
 
-A single-page, map-based directory of the things that stay open after midnight in Kolkata:
-24/7 pharmacies, late-night food, petrol pumps and mechanics, and safe transit pickup
-points. Built for the 3:30 AM shift-end moment, on a phone, on a dark street.
+A dark-mode-first, filterable map of the places that are still open when the rest of
+Kolkata has shut: chemist counters, late-night food, petrol pumps, and the transit
+points where you can wait for a ride home. Static files, no server, no API key —
+built to be hosted on GitHub Pages exactly as it sits in this folder.
 
-No build step, no framework, no API keys, no backend. Static files and one GeoJSON
-document. If you can host a file, you can host this.
+**Every place in it is a real place, taken from OpenStreetMap.** There is no demo
+data, no generated filler and no hand-written seed list in this repository any more:
+1,611 entries, each one an actual mapped business, station or hospital with its own
+coordinates, its own OpenStreetMap id, and its own last-edit date so you can judge how
+stale it is.
 
 ```
-testCode/
-├── index.html                      # the app shell
-├── assets/
-│   ├── style.css                   # dark-mode-first design system
-│   └── app.js                      # Leaflet setup, filters, geolocation, sheet gestures
-├── data/
-│   └── locations.geojson           # 400 places, 117 localities (the runtime dataset)
-├── tools/
-│   ├── seed-locations.geojson      # 37 hand-written entries (the curated seeds)
-│   └── generate-locations.mjs      # rebuilt the dataset: seeds + generated coverage
-├── .nojekyll                       # serve files as-is on GitHub Pages
-└── README.md
+index.html                 the whole app: shell, filters, map, bottom sheet
+assets/style.css           dark-first design system (tokens at the top)
+assets/app.js              Leaflet setup, filters, geolocation sort, sheet gestures
+data/locations.geojson     the dataset the app loads (1,611 places, ~980 KB)
+tools/fetch-osm.mjs        download real places from OpenStreetMap (the only networked step)
+tools/build-locations.mjs  OpenStreetMap extract -> data/locations.geojson
+tools/hours.mjs            opening_hours reader, with its test corpus
+tools/localities.mjs       117 neighbourhood anchors, used for labels and search
+tools/verify-dataset.mjs   parser tests + dataset audit (34,991 checks)
+tools/osm-source.json      the committed extract the build reads (offline rebuild)
 ```
 
-## Hosting it on GitHub Pages
+Everything is referenced with relative paths, so it works at
+`https://<user>.github.io/<repo>/` unchanged.
 
-1. Commit this folder to a repository.
-2. **Settings → Pages → Source: Deploy from a branch**, pick your branch and the folder
-   (`/ (root)` if `testCode` is the repo root, or the matching path if it is nested).
-3. Open `https://<user>.github.io/<repo>/testCode/`.
+## Hosting it
 
-Every path in the project is **relative** (`assets/…`, `data/…`), so it works unchanged at
-a repo subpath, at a user page root, or on any other static host. `tools/` is never
-requested by the page - it is there for whoever maintains the data.
-
-> **Opening it from disk will not work.** Double-clicking `index.html` sends a `file://`
-> request, and browsers block `fetch()` for local files. The page detects this and says so
-> instead of failing silently. To preview locally, serve the folder:
-> `python3 -m http.server 8000` then visit `http://localhost:8000/`.
-
-Geolocation is a secure-context API: it works on GitHub Pages (https) and on
-`http://localhost`, but not on a plain `http://` LAN address. Over plain http the page
-still works; only the "nearest to me" sort is unavailable.
-
-## Read this before you trust the data
-
-The dataset has **mixed provenance**, and it is labelled as such:
-
-| | Count | What it is |
-| --- | --- | --- |
-| `"source": "curated-seed"` | 37 | Hand-written against real Kolkata places (Dacres Lane, Kusum Rolls, Arsalan, Howrah Station, the Howrah bridge approach pumps...) |
-| `"source": "synthetic-fill"` | 363 | Generated from **real localities and real road names**, but the businesses are invented |
-
-- **Coordinates are locality-accurate to a few hundred metres, not to a doorstep.** Every
-  entry is jittered inside its own locality, so a pin tells you the right neighbourhood and
-  the right road at best.
-- **No entry is ground-verified.** `verified` is `null` throughout. Some timings are
-  realistic but none of them have been checked by a person standing there.
-- **Phone numbers are deliberately absent.** These entries originally carried placeholder
-  numbers like `+91 33 4000 0001`. Even as obvious fakes that is a bad idea: someone
-  finishing at 3:30 AM taps "Call" and dials a stranger. The `phone` field is fully
-  supported by the schema and the popup will show a **Call** button the moment a real,
-  verified number is added - so add one only when you have actually seen it printed on the
-  shop.
-- `nightGuaranteed: true` marks the 32 entries whose hours were nudged by the coverage pass
-  (below) so their locality would not be empty at 03:30.
-
-Treat this as a working demonstration of the product, with a data pipeline you can point
-at real data - not as a directory anyone should navigate by.
-
-## Coverage
-
-400 places across 117 Kolkata localities, from Barrackpore and Barasat in the north, through
-Behala and Thakurpukur in the south-west, out to Rajarhat, New Town and the Airport in the
-east, across to Howrah, Bally and Domjur on the other bank.
-
-| Category | Places | Open at 03:30 | Open at 22:00 |
-| --- | --- | --- | --- |
-| 24/7 pharmacy | 126 | 103 | 124 |
-| Late-night food | 128 | 88 | 119 |
-| Petrol pump / mechanic | 75 | 58 | 73 |
-| Safe transit pickup | 71 | 56 | 71 |
-| **Total** | **400** | **305 (76%)** | **387 (97%)** |
-
-Three guarantees hold across the whole dataset, and each one exists because the first
-version of this file broke it:
-
-> **1. Every locality has a chemist.** Someone who needs medicine at 3 AM should not be
-> told the nearest one is four kilometres away.
-
-> **2. Every locality has something hot to eat.**
-
-> **3. At least two places are open at 03:30 in every one of the 117 localities.**
-
-The first version failed all three. Purely global balancing fed slots to whichever category
-was furthest behind nationally, so **49 localities ended up with no food at all** and five
-(Bowbazar, Jadavpur, Panchasayar, Baranagar, Shibpur) had *nothing* open at 3:30 - someone
-standing there would open the app and see an empty list. So the generator allocates in three
-phases: essentials first (one chemist and one food place per locality, always), then arterial
-coverage (fuel and transit for the core / market / transit / tech / highway profiles), then
-the rest by profile-weighted global deficit. A final pass walks every locality, counts what
-is open at 03:30, and converts its own synthetic entries until two are - it never touches a
-curated seed. That pass adjusted 26 entries.
-
-Note what is *not* guaranteed: 49 localities have no fuel pump and 52 have no transit pickup.
-That is deliberate. Pumps and cab ranks belong on the arterial roads, junctions and station
-forecourts, not in every residential lane, and a night network that claims a 24-hour petrol
-pump on every other street would be lying. Coverage is dense where density is real.
-
-## The data pipeline
-
-`data/locations.geojson` is a generated artefact. To change it, edit the inputs and rebuild:
+Push this folder's contents, then **Settings → Pages → Deploy from a branch →
+`main` / root**. `.nojekyll` is already present so Pages serves the `assets/` and
+`data/` directories without Jekyll processing them. To preview locally, any static
+server will do:
 
 ```bash
-node tools/generate-locations.mjs      # writes data/locations.geojson
+cd testCode && python -m http.server 8231
 ```
 
-The build is **deterministic** (fixed PRNG seed, `seed: 20260918`), so re-running it
-produces a byte-identical file and clean diffs. Three things go into it:
+## Where the data comes from
 
-1. **`tools/seed-locations.geojson`** - the hand-written entries, passed through untouched
-   except that ids are reissued (`ph-001`, `fd-014`, …) with the seeds first in each
-   category. `#ph-001` is always Apollo Pharmacy on Park Street.
-2. **`LOCALITIES`** in the generator - 117 locality anchors with real coordinates, a density
-   weight, a profile (core / market / transit / tech / highway / residential) and two or
-   three real street names each. The profile drives the category mix, so a market street
-   gets food stalls while B. T. Road and the Kona Expressway get pumps.
-3. **Hours buckets** per category - weighted, skewed hard to the night. Windows that cross
-   midnight are written honestly (`"open": "17:00", "close": "05:00"`), which is what the
-   app's "open now" logic reads.
-
-Category allocation runs in three phases (essentials, arterial coverage, then global
-debt), and a final pass enforces night coverage per locality - see [Coverage](#coverage).
-If you add a locality to `LOCALITIES`, all of that applies to it automatically; you get two
-guaranteed entries plus its share of the rest.
-
-### Schema
-
-```json
-{
-  "type": "Feature",
-  "geometry": { "type": "Point", "coordinates": [88.3520, 22.5535] },
-  "properties": {
-    "id": "ph-001",
-    "name": "Apollo Pharmacy - Park Street",
-    "category": "pharmacy",
-    "locality": "Park Street",
-    "address": "18B Park Street, beside Park Street Metro Gate 2",
-    "source": "curated-seed",
-    "always": true,
-    "hours": "Open 24 hours",
-    "tags": ["park street", "chemist", "medicine"],
-    "verified": null
-  }
-}
-```
-
-- `coordinates` is `[longitude, latitude]` - GeoJSON order, not the order you say it in.
-- `category` must be one of `pharmacy`, `food`, `fuel`, `transit`.
-- A `close` earlier than `open` means the window **wraps past midnight**; the app reads it
-  that way rather than treating it as an error.
-- `"always": true` means 24x7 and replaces `open`/`close`.
-- `closedDays` is optional, JS day numbers (`[0]` = closed Sundays).
-- `phone` is optional and unused in the shipped sample - see the warning above.
-
-### Pointing it at real data
-
-The whole runtime contract is "a GeoJSON FeatureCollection of Points with those properties",
-so swapping in reality is a data problem, not a code problem:
+Two commands, and only the first one touches the network:
 
 ```bash
-# rough starting point: OpenStreetMap has pharmacies, fuel stations and many late-night
-# eateries across Kolkata. Export from Overpass as GeoJSON, then map the tags onto the
-# schema above. Example query for 24/7 pharmacies inside the city:
-cat > /tmp/q.overpass <<'EOF'
-[out:json][timeout:180];
-area["name"="Kolkata"]->.k;
-node(area.k)["amenity"="pharmacy"]["opening_hours"];
-out body;
-EOF
-curl -s https://overpass-api.de/api/interpreter --data-urlencode "data@/tmp/q.overpass"
+node tools/fetch-osm.mjs      # Overpass API -> tools/osm-source.json (cached per category)
+node tools/build-locations.mjs # -> data/locations.geojson
 ```
 
-OSM `opening_hours` values like `24/7` or `Mo-Su 08:00-02:00` map cleanly onto
-`always` / `open` / `close`. Expect far fewer than 400 real entries, thinner timings, and a
-lot of `opening_hours` that is simply wrong - field verification is the only thing that
-makes a night directory trustworthy, which is exactly why every entry here says so.
+`fetch-osm.mjs` queries the [Overpass API](https://overpass-api.de/) for the Greater
+Kolkata box (`22.28,88.05,22.92,88.62` — Budge Budge to Barrackpore, Domjur to
+Rajarhat) and keeps only the tags the directory uses. It rotates between four public
+mirrors, backs off on HTTP 429/504, caches each category separately so an interrupted
+run resumes, and refuses to cache an empty result that is really a mirror giving up
+(there is a count query to tell the difference).
 
-## The design system
+`build-locations.mjs` runs offline from that extract. It never invents a place, a
+coordinate or an hour.
 
-Dark-mode-first, because this is an outdoor, low-light utility. Tokens live at the top of
-`assets/style.css`; the values below are the whole palette.
+Data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright),
+available under the ODbL. Attribution is in the app footer and on every popup.
+Fetched **2026-09-21**.
 
-| Role | Value | Why |
-| --- | --- | --- |
-| App background | `#121212` | Never `#000` - pure black smears on OLED while scrolling |
-| Card / floating surface | `#1E1E1E`, `#262626` | Elevation by lightness; shadows vanish on dark |
-| Primary text | `rgba(255,255,255,.87)` | Softens to ~`#E0E0E0`; pure white halates |
-| Secondary text | `rgba(255,255,255,.60)` | Hierarchy from opacity, not from font size |
-| Hairline | `rgba(255,255,255,.12)` | Borders separate, shadows do not |
-| 24/7 pharmacy | `#81C784` | Soft mint |
-| Late-night food | `#FFB74D` | Pastel amber |
-| Pump / mechanic | `#4DD0E1` | Muted cyan |
-| Safe pickup | `#B39DDB` | Dusty lavender (5th category) |
-| Closed / caution | `#E57373` | Light coral - a status, never a category |
+### Why not Google
 
-Accents are desaturated 20-30% from their Material 300 sources so they do not vibrate
-against the dark background. Active filter chips use tinted glass plus the accent as text
-(~6:1 contrast) rather than a solid bright fill, which keeps glare down while still reading
-instantly. Every interactive target is at least 48px - including the cluster bubbles and
-the small secondary controls, which use a transparent `::after` overlay to widen their hit
-area without growing visually.
+Google Places would be the other obvious source, and it is not usable here: it needs
+an API key, a billing account and a server-side proxy to keep the key out of a public
+page — none of which a static GitHub Pages directory has. OpenStreetMap is the only
+source that is real, keyless, redistributable under a licence that permits this, and
+queryable in bulk. It also happens to be the one that improves when you fix it.
 
-Glassmorphism is the layering language: panels, the sheet, map controls and the info popup
-all use `backdrop-filter: blur(18px) saturate(140%)` over `rgba(24,24,24,.66)`, with a 1px
-hairline border. There is a `@supports not (backdrop-filter)` fallback to a near-opaque
-surface, plus `prefers-reduced-motion` and `prefers-contrast: more` handling.
+## What is actually in it
 
-## The map
+| Category | Places | Provably open at 03:30 | Median distance from a neighbourhood centre |
+| --- | ---: | ---: | ---: |
+| 24/7 pharmacy *(incl. 340 hospitals)* | 474 | 344 | 0.56 km |
+| Late-night food | 727 | 10 | 0.56 km |
+| Petrol pump & mechanic | 77 | 2 | 1.35 km |
+| Transit pickup | 333 | 0 | 0.57 km |
+| **Total** | **1,611** | **356** | **0.59 km** |
 
-The default basemap is **Esri's World Dark Gray Canvas** (base + label reference). It is
-dark but not black, so roads, the river, parks and place labels all stay legible and the
-glass UI and markers sit on top instead of on a blank void.
+Coverage, measured against all **117** neighbourhood anchors rather than asserted:
 
-**Why not CARTO Dark Matter?** Dark Matter is still the best-looking dark basemap going,
-and it was the first choice here. CARTO now requires an API key for the basemap CDN, and
-keyless requests come back stamped with `API KEY REQUIRED` across the tiles. A watermarked
-map is worse than no map, so the default moved to a keyless, unwatermarked source. Both
-CARTO layers were dropped rather than shipped broken. If you hold a CARTO key, add a
-`dark_all` layer back with `?api_key=...` and its attribution string in `LAYERS` in
-`assets/app.js` - the switcher takes any number of tile layers per style.
+- Something open at 03:30 is within **0.59 km** of the median anchor, **1.6 km** for
+  the 90th percentile, **2.33 km** at the very worst.
+- Every one of the 117 anchors has a pharmacy **and** a food place within 2 km, except
+  three rural-ish corners for food (worst case 8 km, at the edge of the box).
+- Fuel is deliberately sparser: 77 pumps on arterials, not one per lane.
 
-Other deliberate map choices:
+## The honest part: hours
 
-- **Stacked tiles for the dark theme.** `World_Dark_Gray_Base` plus
-  `World_Dark_Gray_Reference` (labels) are two tile layers in the same pane.
-- **No tile inversion hack.** `filter: invert(100%) hue-rotate(180deg)` is the classic
-  rescue for being stuck with bright OSM tiles. It also destroys place-label legibility and
-  turns water into glow-in-the-dark orange. Choosing the right source beats filtering the
-  wrong one.
-- **The map is switchable.** Dark Gray Canvas, Esri World Street Map (full colour) and World
-  Imagery (satellite). Night is the default; the others are for daylight, for a screenshot,
-  or for orienting yourself against a building you can actually see.
-- **"Dim map"** scrims the tiles *below* the UI and drops tile brightness to 78%. Text stays
-  at full contrast while the largest light source on the screen gets quieter.
-- **Initial framing is the city core, not the whole metro belt.** Fitting all 400 places
-  frames Barrackpore to Budge Budge and parks a third of the city in one bubble at zoom 9.5.
-  The opening view uses the 10th-90th percentile bounds instead; panning out still reveals
-  the edge localities.
-- Attribution is real and visible (bottom-left, above the sheet) and changes with the
-  basemap. It is a licence requirement, not a watermark - stripping it is not an option.
+OpenStreetMap in Kolkata has excellent geometry and almost no opening hours.
+**152 of 1,611 entries carry hours this app can read**, 27 are tagged `24/7`, and
+**1,459 say "hours not listed"**. So:
 
-## What it does
+- The **Open-now** filter matches 356 entries — 340 of them hospitals, where a night
+  casualty is a property of the hospital rather than of the mapped hours.
+- Food and transit are hit hardest: a roll counter's hours are essentially never
+  recorded, so at 03:30 the app can *show* you the food but cannot *promise* it.
+- Nothing is guessed to fill the gap. An entry with unreadable hours keeps the raw
+  string (`"Mo-Fr 13:00-15:30,18:00-23:00"`) and is shown as *"See hours"*; an entry
+  with no hours at all is shown as *"Hours not listed"* and is excluded from the
+  open-now count. The status line reports it separately: *"431 of 1611 open right
+  now, 1139 with hours unlisted."*
 
-- Filter by category, search names/addresses/tags/**localities**, toggle "Open now"
-  (computed from the current clock, including windows that wrap past midnight).
-- **"Near me"** uses the browser Geolocation API, draws your position with an accuracy ring,
-  sorts the list by haversine distance, and groups results into distance bands (under 1 km,
-  1 km out, 2 km out…). With 400 entries spread citywide, "which of these is near *me*" is
-  the question that matters, so this is a first-class action rather than a buried toggle.
-- The list is **paged, 48 cards at a time**. Four hundred cards is a lot of DOM for a phone
-  and nobody scrolls past the first few dozen; "Show more" appends so your scroll position
-  survives the tap. A full filter change re-renders 400 clustered markers in ~55 ms.
-- Every card and marker popup carries straight-line distance, live open/closed status,
-  night-specific notes, safety notes for transit points, and a **Directions** link straight
-  into Google Maps navigation.
-- Markers are 48px tap targets with 34px visual discs, an "open now" halo, and a coral dot
-  for closed places. **Leaflet.markercluster** groups overlapping pins into glass count
-  bubbles (tinted with the category's accent when every member shares one) - at city zoom
-  that is the difference between a tappable map and one grey blob. The popup path calls
-  `zoomToShowLayer` for a clustered marker, with a timeout fallback, so a deep link or a
-  list tap still lands on the right pin.
-- Deep links: `…/index.html#ph-001` opens with that place selected and its popup up.
-- Keyboard: `/` focuses search, `Esc` clears, the sheet handle responds to `Enter`/`Space`,
-  markers are tabbable.
-- Errors are surfaced in the page, not swallowed. A static site that fails silently is a
-  static site nobody can debug.
+This is the dataset's main weakness and it is OpenStreetMap's, not the app's. The fix
+is a five-minute edit: open any place's popup, follow **OSM entry**, sign in and add
+`opening_hours`. Re-run the two commands above and it is in everyone's map.
 
-## Dependencies
+## What was removed, and what is inferred
 
-Two CDN files, both pinned with Subresource Integrity so a tampered copy cannot execute:
+The previous version of this folder held 37 hand-written entries and 363 generated
+ones. Both are gone, along with the seed file, the generator and every code path that
+read them — `git status` shows the deletion. Nothing in `data/locations.geojson` now
+comes from anywhere but OpenStreetMap.
 
-- [Leaflet 1.9.4](https://leafletjs.com) - mapping
-- [Leaflet.markercluster 1.5.3](https://github.com/Leaflet/Leaflet.markercluster) -
-  clustering. If it ever fails to load, the app falls back to a plain layer group instead of
-  throwing, so the page still works.
+Three judgement calls survive in the build, and each one is labelled in the data:
 
-No build step, no bundler, no package manager, and no runtime dependency on the generator.
+1. **Hospitals are listed as pharmacies, and flagged `overnight`.** The query returns
+   443 elements, of which 78 are dropped by name as things that are never a 3 AM
+   resource (eye, dental, IVF, diagnostic, veterinary…). The remaining 358 are
+   collapsed to **340 pins** after de-duplicating campuses that are mapped as several
+   buildings. A hospital keeps a night casualty whether or not the mapper typed its
+   hours in, so `overnight: true` puts it in the open-now count — and the popup says
+   *"casualty hours not mapped"* rather than pretending the hours are known.
+2. **Unnamed places.** 35 entries have a position and no name; they are kept, shown in
+   italic as *"Eatery (name not mapped) - Behala"*, and flagged `nameUnmapped`. An
+   unnamed **hospital, pump or station** is dropped instead — at 3 AM "there is a
+   building here" is useless to give a driver.
+3. **Counts.** 29 unnamed eateries that sit within 100 m of a named one are dropped as
+   the same shop mapped twice, as are same-named entries within 60 m in one category.
+   23 entries whose mapped hours prove they shut for the whole night are dropped.
 
-## Licence
+Places further than 7 km from any of the 117 anchors are labelled `"Kolkata"` (203 of
+them, mostly the outer suburbs); everything else carries its nearest real
+neighbourhood, which is what makes `behala` or `new town` searchable.
 
-Code MIT. Data ODbL. Basemap tiles belong to their providers (Esri and its data suppliers)
-and are subject to their terms, which is why the attribution control stays visible.
+## Verification
+
+```bash
+node tools/verify-dataset.mjs
+```
+
+Runs the opening-hours reader against 18 hand-picked cases (a window that wraps past
+midnight must be open at 02:30 and shut at noon; a split shift must be refused rather
+than approximated) and then audits the built file: schema, bounding box, one pin per
+OpenStreetMap element, hours consistency, no unmapped-name entry that reads like a
+brand, no hospital claiming anything it is not, and the metadata counts against the
+file's own contents. Currently **34,991 checks pass, 0 fail, 3 warnings** — the
+warnings are "same first word nearby" cases like *"Wow! Momo"* and *"Wow! China
+Diner"*, which are two real brands in one food court.
+
+The browser side was checked in a real page, not by reading the code: 1,611 features
+load and cluster, a full filter rebuild takes ~108 ms, nearest-first from a simulated
+fix at Park Circus returns Quest Mall's food within 230 m with correct distance bands,
+`behala` returns 14 places, and there are no console errors and no failed tile
+requests.
+
+## The interface
+
+Dark-first, because the user is standing on a street at 3:30 AM:
+
+- `#121212` app background, `#1E1E1E` surfaces, text at 87% / 60% opacity. No pure
+  black (OLED smear) and no pure white (halation).
+- Desaturated accents so nothing vibrates against the dark: mint `#81C784` pharmacy,
+  amber `#FFB74D` food, cyan `#4DD0E1` fuel, lavender `#B39DDB` transit.
+- Glassmorphism on the panel, popups, chips and popovers (`backdrop-filter` plus a
+  1px `rgba(255,255,255,.12)` hairline) — in dark mode a border reads as elevation
+  where a drop shadow would vanish.
+- 48px minimum touch targets, a draggable bottom sheet on phones that becomes a
+  sidebar at ≥1000px, and keyboard access (`/` to search, `Esc` to clear).
+
+**Basemap note.** The brief said CARTO Dark Matter. Built as specified, the screenshot
+came back with `API KEY REQUIRED` stamped across every tile: CARTO now gates the
+basemap CDN. A watermarked map is worse than no map, so the default is Esri's *World
+Dark Gray Canvas* (base + label overlay as two stacked layers) — keyless, unwatermarked,
+with roads, the river and place labels legible. Basemap switcher also offers full-colour
+streets and satellite.
+
+## Contributing
+
+Add real places to **OpenStreetMap**, not to this repository:
+
+```bash
+node tools/fetch-osm.mjs && node tools/build-locations.mjs && node tools/verify-dataset.mjs
+```
+
+The most valuable contribution by far is `opening_hours` on the 1,459 entries that
+have none.
