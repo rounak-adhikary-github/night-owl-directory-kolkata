@@ -210,6 +210,33 @@ function reportError(label, err) {
 window.addEventListener('error', (e) => reportError('Script error', e.error || e.message));
 window.addEventListener('unhandledrejection', (e) => reportError('Startup failed', e.reason));
 
+/**
+ * Copy to the clipboard, with the old textarea trick as a fallback: the async
+ * Clipboard API is unavailable on http:// origins and inside some in-app browsers,
+ * which is exactly where a link like this gets tapped.
+ */
+async function copyText(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (err) { /* fall through to the legacy path */ }
+  try {
+    const field = document.createElement('textarea');
+    field.value = text;
+    field.setAttribute('readonly', '');
+    field.style.cssText = 'position:fixed;top:-100px;left:-100px;opacity:0';
+    document.body.appendChild(field);
+    field.select();
+    const ok = document.execCommand('copy');
+    field.remove();
+    return ok;
+  } catch (err) {
+    return false;
+  }
+}
+
 let toastTimer = null;
 function toast(html, ms = 4200) {
   const el = $('#toast');
@@ -324,7 +351,32 @@ function iconFor(f, active) {
   });
 }
 
+/*
+ * Rebuilding the cluster layer while the map is mid-zoom leaves the plugin's own
+ * animation queue holding markers that no longer exist, and Leaflet then throws
+ * "Cannot use 'in' operator to search for '_leaflet_id' in undefined" from inside
+ * markercluster - which reaches the user as a broken status line, because the app
+ * reports anything unexpected it survives. Filter changes and the clock tick can
+ * both land during an animation, so the rebuild waits for the map to settle and
+ * runs once afterwards instead of skipping.
+ */
+let mapSettling = false;
+let rebuildPending = false;
+
+function settleMap() {
+  mapSettling = false;
+  if (!rebuildPending) return;
+  rebuildPending = false;
+  // One frame later: the plugin's own animationend handler runs on the same tick
+  // as zoomend, and it is the thing that trips over a half-cleared layer.
+  requestAnimationFrame(() => buildMarkers());
+}
+
 function buildMarkers() {
+  if (mapSettling) {
+    rebuildPending = true;
+    return;
+  }
   markerLayer.clearLayers();
   state.markers.clear();
   state.visible.forEach((f) => {
@@ -337,7 +389,11 @@ function buildMarkers() {
       alt: `${p.name}, ${cat.label}`
     });
     marker.__cat = p.category;
-    marker.on('click', () => select(p.id, { fromMarker: true }));
+    // A second tap on the pin you are already looking at closes it, same as the card.
+    marker.on('click', () => {
+      if (state.selectedId === p.id) deselect();
+      else select(p.id, { fromMarker: true });
+    });
     marker.addTo(markerLayer);
     state.markers.set(p.id, marker);
   });
@@ -351,8 +407,11 @@ function panPadding() {
     const covered = panel.classList.contains('is-collapsed') ? 16 : Math.round(rect.right) + 24;
     return { topLeft: L.point(covered, 24), bottomRight: L.point(28, 28) };
   }
-  // The extra 48px keeps the popup's action buttons clear of the sheet's top edge.
-  const coveredBottom = Math.max(0, Math.round(window.innerHeight - rect.top)) + 48;
+  /* The sheet's height plus a margin: enough that the popup's action buttons clear
+     the sheet's top edge, and no more. It used to reserve 48px, which on a short
+     screen squeezed the visible map below the height of the popup itself - and a
+     popup taller than the space it can pan into is a popup that hangs off the edge. */
+  const coveredBottom = Math.max(0, Math.round(window.innerHeight - rect.top)) + 18;
   return { topLeft: L.point(24, 24), bottomRight: L.point(28, coveredBottom) };
 }
 
@@ -384,8 +443,30 @@ function focusFeature(f, instant) {
     openPopup(f);
     return;
   }
+
+  /* Open on moveend, not on a stopwatch.
+
+     A fixed delay used to race the flight: the popup opened mid-animation, Leaflet
+     panned the map to fit it, and then the animation's own final frame undid that
+     pan - leaving the info card hanging off the edge of the screen, half of it
+     unreachable on a phone. Waiting for the map to stop costs a few milliseconds and
+     is the only version that cannot land in the wrong place. The timer stays as a
+     safety net for the case where the move ends without the event. */
+  let opened = false;
+  const open = () => {
+    if (opened) return;
+    opened = true;
+    clearTimeout(popupTimer);
+    map.off('moveend', open);
+    // The flight to this place may outlive the interest in it: tapping a second card,
+    // or tapping out of the first, while the map is still moving. Opening then would
+    // put an info card on screen for a place that is no longer selected.
+    if (state.selectedId !== f.properties.id) return;
+    openPopup(f);
+  };
+  map.once('moveend', open);
+  popupTimer = setTimeout(open, 1600);
   map.flyTo(ll, zoom, { duration: reduceMotion ? 0 : 0.7 });
-  popupTimer = setTimeout(() => openPopup(f), reduceMotion ? 30 : 720);
 }
 
 /* One popup instance for the whole map. Binding a popup to each marker instead lets
@@ -402,9 +483,15 @@ const infoPopup = L.popup({
    the popup for a place the user has already moved on from. */
 let popupToken = 0;
 
+/* Set while the app closes its own popup (switching places, filters changing). The
+   user closing the popup means "I am done with this one" and clears the selection;
+   the app doing it means nothing at all. */
+let suppressPopupClose = false;
+
 function openPopup(f) {
   const marker = state.markers.get(f.properties.id);
   if (!marker) return;
+  if (state.selectedId !== f.properties.id) return;   // see the note in focusFeature
 
   const token = ++popupToken;
   let settled = false;
@@ -437,16 +524,18 @@ function openPopup(f) {
  * should say whose data it is - all the more so when the hours are missing, which
  * is the state that gets read as "open" when it is nothing of the kind.
  */
-function provenanceOf(p) {
+function provenanceOf(p, st) {
   const bits = ['OpenStreetMap'];
   if (p.osmEdited) bits.push(`mapped ${p.osmEdited}`);
-  if (p.nameUnmapped) bits.push('name not mapped');
   // "No hours" and "hours I could not read" are different admissions, and the card
   // shows a different status for each ("Hours not listed" vs "See hours"), so the
-  // provenance line cannot collapse them into one phrase.
+  // provenance line cannot collapse them into one phrase. It does not repeat the
+  // status line either: on a phone every row spent saying the same thing twice is a
+  // row pushing the action buttons off the screen.
+  const hoursAlreadySaid = st && (st.label === 'Hours not listed' || st.label === 'See hours');
   if (p.overnight && !p.hoursKnown) bits.push('casualty hours not mapped');
   else if (!p.hoursKnown && p.rawHours) bits.push('hours mapped but not machine-readable');
-  else if (!p.hoursKnown) bits.push('no hours mapped');
+  else if (!p.hoursKnown && !hoursAlreadySaid) bits.push('no hours mapped');
   return bits.join(' &middot; ');
 }
 
@@ -467,11 +556,11 @@ function popupHtml(f) {
   }
   if (p.safety) rows.push(`<div class="pop__row"><b>Safety</b><span>${esc(p.safety)}</span></div>`);
   if (p.notes) rows.push(`<div class="pop__row pop__note">${esc(p.notes)}</div>`);
-  rows.push(`<div class="pop__row pop__data"><b>Data</b><span>${provenanceOf(p)}</span></div>`);
+  rows.push(`<div class="pop__row pop__data"><b>Data</b><span>${provenanceOf(p, st)}</span></div>`);
 
   return `<div class="pop" style="--c:${cat.color}">
     <span class="pop__cat">${esc(p.subtypeLabel || cat.label)}</span>
-    <h3 class="pop__name${p.nameUnmapped ? ' pop__name--unmapped' : ''}">${esc(p.name)}</h3>
+    <h3 class="pop__name">${esc(p.name)}</h3>
     <p class="pop__addr">${esc(p.address)}</p>
     <div class="pop__meta">${rows.join('')}</div>
     <div class="pop__actions">
@@ -519,9 +608,10 @@ function render() {
   renderList();
   renderCount();
   renderStatusline();
-  // Do not leave an info card hanging over a place the filters just removed.
+  // Filters removed the selected place: clear the selection rather than leave an
+  // info card and a lit pin pointing at something that is no longer listed.
   if (state.selectedId && !state.visible.some((f) => f.properties.id === state.selectedId)) {
-    map.closePopup();
+    deselect();
   }
 }
 
@@ -590,16 +680,24 @@ function appendCards(from, to) {
       <span class="card__badge">${cat.icon}</span>
       <span class="card__main">
         <span class="card__top">
-          <span class="card__name${p.nameUnmapped ? ' card__name--unmapped' : ''}">${esc(p.name)}</span>
+          <span class="card__name">${esc(p.name)}</span>
           ${km != null ? `<span class="card__dist">${fmtDistance(km)}</span>` : ''}
         </span>
         <span class="card__addr">${esc(p.address)}</span>
         <span class="card__foot">
           <span class="status status--${st.status}">${st.label}</span>
           ${p.hours && p.hours !== st.label ? `<span class="card__hours">${esc(p.hours)}</span>` : ''}
+          <!-- Always in the markup and shown from the pressed state, rather than
+               injected on selection: the list is rebuilt from scratch by every
+               filter change and by the clock tick, and an injected hint would be
+               wiped by the next render while the selection survived it. -->
+          <span class="card__close" aria-hidden="true">Tap again to close</span>
         </span>
       </span>`;
-    button.addEventListener('click', () => select(p.id));
+    button.addEventListener('click', () => {
+      if (state.selectedId === p.id) deselect();
+      else select(p.id, { fromList: true });
+    });
     li.appendChild(button);
     frag.appendChild(li);
   }
@@ -662,9 +760,69 @@ function hideNotice() {
 
 /* ---------------------------------------------------------------- selection */
 
+/* ------------------------------------------------------------ selection
+
+   Selecting a place has to be as reversible as it is easy. Three ways out, because
+   on a phone any one of them may be the one you reach for:
+
+     - tap the map background, the popup's close button, or Esc
+     - tap the same card or pin again (it toggles)
+     - the browser's own back gesture, which is what a thumb goes to first
+
+   That last one only works if the selection is a real history entry, so each pick
+   pushes one and the URL carries the id - which also makes any place linkable.
+   ------------------------------------------------------------------------- */
+
+/** One history entry per pick, tagged so it is ours to pop and nobody else's. */
+function pushSelection(id) {
+  const url = `#${encodeURIComponent(id)}`;
+  if (!history.pushState) return;
+  try {
+    history.pushState({ owl: 'selection', id }, '', url);
+  } catch (err) {
+    // Sandboxed frames and file:// refuse pushState; a hash still helps.
+    try { history.replaceState(null, '', url); } catch (err2) { /* nothing left to do */ }
+  }
+}
+
+/** Take the selection entry back off the stack, or just strip the fragment. */
+function dropSelectionHistory() {
+  if (!history.replaceState || !history.pushState) return;
+  if (history.state && history.state.owl === 'selection') {
+    // Ours: walking back lands on the map with the sheet where the user left it.
+    history.back();
+    return;
+  }
+  try { history.replaceState(null, '', location.pathname + location.search); }
+  catch (err) { /* file:// and odd frames: the hash is cosmetic */ }
+}
+
+/** A panel with a place still highlighted but filtered out of the list is a lie. */
+function closePopupQuietly() {
+  suppressPopupClose = true;
+  map.closePopup();
+  suppressPopupClose = false;
+}
+
+function deselect(opts = {}) {
+  const previous = state.selectedId;
+  if (!previous) return;
+  state.selectedId = null;
+
+  const feature = state.features.find((x) => x.properties.id === previous);
+  if (feature && state.markers.has(previous)) {
+    state.markers.get(previous).setIcon(iconFor(feature, false));
+  }
+  document.querySelectorAll('.card__hit').forEach((btn) => btn.setAttribute('aria-pressed', 'false'));
+  closePopupQuietly();
+  // Not when the browser walked back for us: that entry is already spent.
+  if (!opts.fromHistory) dropSelectionHistory();
+}
+
 function select(id, opts = {}) {
   const f = state.features.find((x) => x.properties.id === id);
   if (!f) return;
+  const isNew = state.selectedId !== id;
 
   const previous = state.selectedId;
   state.selectedId = id;
@@ -682,7 +840,16 @@ function select(id, opts = {}) {
   });
 
   focusFeature(f, opts.instant);
-  if (history.replaceState) history.replaceState(null, '', `#${id}`);
+
+  // Only a brand-new pick earns a history entry; a re-render or a deep link must
+  // not stack duplicates (the back gesture would need ten presses to escape).
+  if (isNew && !opts.fromHistory) pushSelection(id);
+
+  /* On a phone the list lives in the sheet, so picking from it and staying there
+     hides the very thing that was picked. Drop to the peek: the map, the popup and
+     the card all end up on screen together, and the handle is right there to go
+     back to browsing. */
+  if (opts.fromList && !isDesktop()) setExpanded(false);
 }
 
 /* ---------------------------------------------------------------- geolocation */
@@ -899,6 +1066,21 @@ function bindUi() {
 
   $('#btn-locate').addEventListener('click', locate);
 
+  /* The support button copies the UPI number instead of trying to launch a payment.
+     A upi:// link needs a full VPA (name@bank); all this app was given is a phone
+     number, and guessing the suffix would send money to a stranger's handle. Copying
+     is the honest version: it works in every UPI app, and it cannot misroute money. */
+  const upiBtn = $('#btn-upi');
+  if (upiBtn) {
+    upiBtn.addEventListener('click', async () => {
+      const number = upiBtn.dataset.upi;
+      const copied = await copyText(number);
+      toast(copied
+        ? `<b>UPI number copied</b><br>Pay <span class="mono">${esc(number)}</span> in GPay, PhonePe or any UPI app.`
+        : `<b>Pay to <span class="mono">${esc(number)}</span></b><br>GPay, PhonePe or any UPI app. Could not copy here, so type it.`, 6000);
+    });
+  }
+
   $('#btn-sort').addEventListener('click', (e) => {
     state.sortNearest = !state.sortNearest;
     const btn = e.currentTarget;
@@ -972,12 +1154,26 @@ function bindUi() {
       } else if (!isDesktop()) {
         setExpanded(false);
       }
-      map.closePopup();
+      deselect();
     }
   });
 
+  // Tapping the map is the muscle-memory way out of a place on a phone.
   map.on('click', () => {
     if (!isDesktop()) setExpanded(false);
+    deselect();
+  });
+
+  // Feeds the rebuild guard above: a marker swap is only safe while the map is still.
+  map.on('zoomstart movestart', () => { mapSettling = true; });
+  map.on('zoomend moveend', settleMap);
+
+  // The popup's own close button. That is the user saying "done", so it clears the
+  // selection too - otherwise a lit pin and a stale #id outlive the card they
+  // belonged to.
+  map.on('popupclose', () => {
+    if (suppressPopupClose) return;
+    deselect();
   });
 
   window.addEventListener('resize', () => {
@@ -985,10 +1181,19 @@ function bindUi() {
     if (isDesktop()) setExpanded(false);
   });
 
-  window.addEventListener('hashchange', () => {
-    const id = location.hash.replace('#', '');
-    if (id && state.features.some((f) => f.properties.id === id)) select(id, { instant: true });
-  });
+  /* One handler for the URL, driven by both events: pushState fires neither, a back
+     gesture fires popstate (and hashchange), an edited hash fires only hashchange.
+     Re-reading the URL each time keeps those three paths from disagreeing. */
+  const syncFromUrl = () => {
+    const id = decodeURIComponent(location.hash.replace('#', ''));
+    if (id && id !== state.selectedId && state.features.some((f) => f.properties.id === id)) {
+      select(id, { instant: true, fromHistory: true });
+    } else if (!id && state.selectedId) {
+      deselect({ fromHistory: true });
+    }
+  };
+  window.addEventListener('popstate', syncFromUrl);
+  window.addEventListener('hashchange', syncFromUrl);
 
   // The clock keeps moving: refresh the open/closed labels when the set changes.
   setInterval(() => {
@@ -1038,8 +1243,10 @@ async function boot() {
     maxZoom: 13
   });
 
-  const startId = location.hash.replace('#', '');
-  if (startId) select(startId, { instant: true });
+  // A shared link lands on its place, already selected, without stacking a second
+  // history entry for it (that would cost two back presses to leave the page).
+  const startId = decodeURIComponent(location.hash.replace('#', ''));
+  if (startId) select(startId, { instant: true, fromHistory: true });
 }
 
 try {

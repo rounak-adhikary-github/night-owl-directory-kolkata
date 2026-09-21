@@ -112,10 +112,9 @@ const QUERIES = {
   /* Every eatery the city has mapped, hours or not, named or not. In this city
      the roll counters, biryani joints and chai stalls that carry the night are
      almost never tagged with opening times, so requiring hours would throw away
-     most of the real food coverage; and a good share of them are mapped without a
-     name, which is a placeholder for a real stall on a real street corner. Both
-     ship flagged (hours not listed / name not mapped) and the build sorts out how
-     much of that uncertainty the map can carry. Bakeries are pulled in because
+     most of the real food coverage. Unnamed ones come down too - the build keeps a
+     place only when it has a real name (or a brand painted on it), so the raw pool
+     has to be complete before that decision is made. Bakeries are pulled in because
      they are the one food category in Kolkata that reliably opens at dawn and
      still sells at 1 AM. */
   food: grid((box) => queryFor([

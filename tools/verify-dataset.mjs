@@ -146,7 +146,7 @@ const osmIds = new Map();
 const pins = [];
 const tally = {
   byCategory: {}, bySource: {}, hoursKnown: 0, hoursUnknown: 0, open24h: 0,
-  openAtNightRef: 0, namesUnmapped: 0, hospitals: 0
+  openAtNightRef: 0, hospitals: 0
 };
 const neighbourhoods = new Set();
 
@@ -210,14 +210,11 @@ for (const [i, feature] of doc.features.entries()) {
   if (p.osmEdited) check(/^\d{4}-\d{2}-\d{2}$/.test(p.osmEdited), `${where}: edit date is a date`);
   osmIds.set(p.osmId, (osmIds.get(p.osmId) || 0) + 1);
 
-  // The "no name" state must be visible in the text, not only in the flag: a card
-  // that reads like a brand when OpenStreetMap carries no name is a small lie.
-  if (p.nameUnmapped) {
-    check(/\(name not mapped\)/.test(p.name), `${where}: unknown name says so in the name`);
-    tally.namesUnmapped++;
-  } else {
-    check(!/\(name not mapped\)/.test(p.name), `${where}: named entry does not claim otherwise`);
-  }
+  // Every entry must carry a real name. This guards the rule that removed the old
+  // "(name not mapped)" placeholder: an unnamed place is dropped by the build, so
+  // a placeholder can only reappear here by someone re-adding the label.
+  check(!/not mapped|unnamed|unknown place|no name/i.test(p.name),
+    `${where}: name is a real one, not a placeholder label`);
 
   // A hospital claims a night casualty. That claim is allowed to exist, but it must
   // be a hospital, and it must be flagged as an inference rather than mapped hours.
@@ -239,10 +236,7 @@ for (const [i, feature] of doc.features.entries()) {
     tally.openAtNightRef++;
   }
 
-  pins.push({
-    lat, lon, name: p.name, category: p.category, locality: p.locality,
-    nameUnmapped: !!p.nameUnmapped
-  });
+  pins.push({ lat, lon, name: p.name, category: p.category, locality: p.locality });
 }
 
 // One pin per place: the same OpenStreetMap element must not appear twice.
@@ -253,10 +247,7 @@ for (const [id, n] of ids) {
   check(n === 1, `id ${id} is unique (found ${n})`);
 }
 
-// Near-identical pins in the same category are usually a mapping duplicate. Two
-// unnamed pins are exempt: "Eatery (name not mapped)" says nothing about identity,
-// so their first token matching means nothing - the unnamed-on-top-of-named case is
-// deduplicated by the build instead, and is checked separately below.
+// Near-identical pins in the same category are usually a mapping duplicate.
 const seq = (s) => String(s).toLowerCase()
   .replace(/[^a-z0-9\s]/g, ' ')
   .replace(/\b(pvt|private|ltd|limited|the|and|&|co)\b/g, ' ')
@@ -264,16 +255,10 @@ const seq = (s) => String(s).toLowerCase()
 
 let closePairs = 0;
 let sharedBrand = 0;
-let unnamedOnNamed = 0;
 for (let i = 0; i < pins.length; i++) {
   for (let j = i + 1; j < pins.length; j++) {
     if (pins[i].category !== pins[j].category) continue;
     const d = km(pins[i], pins[j]);
-    if (pins[i].nameUnmapped !== pins[j].nameUnmapped) {
-      if (pins[i].category === 'food' && d < 0.1) unnamedOnNamed++;
-      continue;
-    }
-    if (pins[i].nameUnmapped && pins[j].nameUnmapped) continue;
 
     // A shared first word inside 40 m is worth a look but is not an error: "Wow!
     // Momo" and "Wow! China Diner" are two brands in one food court, and "The Myx"
@@ -289,15 +274,12 @@ for (let i = 0; i < pins.length; i++) {
 }
 check(closePairs === 0,
   `no two places with the same name within 60 m in one category (${closePairs} pairs)`);
-check(unnamedOnNamed === 0,
-  `no unnamed eatery left standing on top of a named one (${unnamedOnNamed} pairs)`);
 
 // Metadata must describe the file it ships with.
 eq(counts.total, doc.features.length, 'metadata count matches the feature count');
 eq(counts.byCategory, tally.byCategory, 'metadata category counts match');
 eq(counts.bySource, tally.bySource, 'metadata source counts match');
 eq(counts.hoursUnknown, tally.hoursUnknown, 'metadata unknown-hours count matches');
-eq(counts.namesUnmapped, tally.namesUnmapped, 'metadata unmapped-name count matches');
 eq(counts.open24h, tally.open24h, 'metadata 24-hour count matches');
 eq(counts.openAtNightRef, tally.openAtNightRef, 'metadata 03:30 count matches');
 eq(counts.neighbourhoods, neighbourhoods.size, 'metadata neighbourhood count matches');
@@ -314,7 +296,6 @@ function report() {
     neighbourhoods: neighbourhoods.size,
     hoursKnown: tally.hoursKnown,
     hoursUnknown: tally.hoursUnknown,
-    namesUnmapped: tally.namesUnmapped,
     hospitals: tally.hospitals,
     open24h: tally.open24h,
     openAtNightRef: tally.openAtNightRef

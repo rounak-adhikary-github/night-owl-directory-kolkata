@@ -10,10 +10,11 @@
    Run:  node tools/build-locations.mjs
 
    Everything in the output comes from OpenStreetMap. Nothing here invents a
-   business, a coordinate or an opening time. Where OpenStreetMap has no hours the
-   entry says "hours not listed" instead of guessing, and where a place has no
-   mapped name the entry says so - the app's own filter counts only places whose
-   hours are known, so an unknown never masquerades as an open.
+   business, a name, a coordinate or an opening time. Where OpenStreetMap has no
+   hours the entry says "hours not listed" instead of guessing, and a place with no
+   name at all is left out rather than listed under a placeholder label. The app's
+   own filter counts only places whose hours are known, so an unknown never
+   masquerades as an open.
 
    Contributing: add real places to OpenStreetMap (overpass-turbo or the iD editor)
    rather than editing this repository. Re-run fetch-osm.mjs, then this script.
@@ -107,7 +108,7 @@ const stats = {
   hoursParsed: 0,
   hoursComplex: 0,
   hoursMissing: 0,
-  nameUnmapped: 0,
+  namedByBrand: 0,
   hospitalsKept: 0,
   hospitalsDroppedByName: 0
 };
@@ -192,14 +193,6 @@ function subtypeLabelFor(t, category) {
   return null;
 }
 
-/* The category label used when OpenStreetMap has no name for a place. */
-const UNNAMED_LABEL = {
-  pharmacy: 'Pharmacy (name not mapped)',
-  food: 'Eatery (name not mapped)',
-  fuel: 'Fuel station (name not mapped)',
-  transit: 'Transit stop (name not mapped)'
-};
-
 const features = [];
 
 /* Ways and relations arrive from `out center` with a centre, so every element
@@ -223,17 +216,24 @@ for (const element of source.elements) {
     continue;
   }
 
-  /* A nameless hospital is a real building but useless to someone searching at
-     3 AM: nothing to give a driver. Everything else survives without a name. */
-  if (isHospital && !mappedName) {
-    stats.droppedUnnamed.hospital = (stats.droppedUnnamed.hospital || 0) + 1;
+  /*
+   * No name, no listing. An entry called "Pharmacy (name not mapped)" is not a
+   * place anyone can ask a driver for, search for, or trust - it just makes the
+   * list look longer than the city it describes.
+   *
+   * One real name is available without inventing anything: `brand`. A pump tagged
+   * `brand=Indian Oil` is called Indian Oil, which is what is painted on the
+   * canopy. Everything else with no name is dropped and counted, so the loss is
+   * visible in the build log rather than hidden in the dataset.
+   */
+  const brandName = (t.brand || '').replace(/\s+/g, ' ').trim();
+  const name = mappedName || (brandName.length > 2 ? brandName : null);
+  if (!name) {
+    stats.droppedUnnamed[isHospital ? 'hospital' : category] =
+      (stats.droppedUnnamed[isHospital ? 'hospital' : category] || 0) + 1;
     continue;
   }
-  if (!mappedName && (category === 'transit' || category === 'fuel')) {
-    stats.droppedUnnamed[category] = (stats.droppedUnnamed[category] || 0) + 1;
-    continue;
-  }
-  if (!mappedName) stats.nameUnmapped++;
+  if (!mappedName) stats.namedByBrand++;
 
   const raw = t.opening_hours;
   const parsed = parseOsmHours(raw);
@@ -251,13 +251,9 @@ for (const element of source.elements) {
   else if (parsed) stats.hoursParsed++;
   else stats.hoursComplex++;
 
-  const name = mappedName ||
-    `${UNNAMED_LABEL[category]}${locality ? ` - ${locality}` : ''}`;
-
   const properties = {
     id: element.id.replace('/', '-'),
     name,
-    nameUnmapped: !mappedName,
     category,
     osmKind: t.amenity || t.shop || t.railway || t.healthcare || null,
     address: addressOf(t, locality),
@@ -311,30 +307,6 @@ for (const element of source.elements) {
     geometry: { type: 'Point', coordinates: [lon, lat] },
     properties
   });
-}
-
-/*
- * An unnamed eatery sitting on top of a named one is almost always the same shop
- * mapped twice (once as a node, once as a building outline, one of them without a
- * name). Dropping the unnamed one removes real clutter and loses nothing: the place
- * is still on the map, under the name someone actually gave it.
- */
-{
-  const namedFood = features.filter((f) => f.properties.category === 'food' && !f.properties.nameUnmapped);
-  const drop = new Set();
-  for (const f of features) {
-    if (f.properties.category !== 'food' || !f.properties.nameUnmapped) continue;
-    const at = { lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0] };
-    if (namedFood.some((n) => distKm(at, {
-      lat: n.geometry.coordinates[1], lon: n.geometry.coordinates[0]
-    }) < 0.1)) {
-      drop.add(f);
-    }
-  }
-  if (drop.size) {
-    stats.droppedDuplicate += drop.size;
-    for (let i = features.length - 1; i >= 0; i--) if (drop.has(features[i])) features.splice(i, 1);
-  }
 }
 
 /*
@@ -426,7 +398,6 @@ const counts = {
   bySubtype: {},
   withHours: 0,
   hoursUnknown: 0,
-  namesUnmapped: 0,
   open24h: 0,
   openAtNightRef: 0,
   neighbourhoods: 0
@@ -441,7 +412,6 @@ for (const f of features) {
   neighbourhoods.add(p.locality);
   if (p.hoursKnown) counts.withHours++;
   else counts.hoursUnknown++;
-  if (p.nameUnmapped) counts.namesUnmapped++;
   if (p.always) counts.open24h++;
   // A hospital counts here: its casualty is open at 03:30 by definition, hours
   // mapped or not. Without that the headline number would understate the one
@@ -474,11 +444,11 @@ const doc = {
     ],
     counts,
     notes:
-      'Every place in this file exists in OpenStreetMap with its own coordinates. ' +
-      'No entry was invented and no entry is a demo. Where an entry has no opening ' +
-      'hours it says "hours not listed"; where it has no name it says "name not ' +
-      'mapped". The Open-now filter counts only entries whose hours are known. ' +
-      'Rebuild with: node tools/fetch-osm.mjs && node tools/build-locations.mjs'
+      'Every place in this file exists in OpenStreetMap with its own coordinates ' +
+      'and its own name. No entry was invented, no entry is a demo, and no entry ' +
+      'carries a placeholder label. Where an entry has no opening hours it says ' +
+      '"hours not listed". The Open-now filter counts only entries whose hours are ' +
+      'known. Rebuild with: node tools/fetch-osm.mjs && node tools/build-locations.mjs'
   },
   features
 };
@@ -492,7 +462,7 @@ console.log(`  by category: ${JSON.stringify(counts.byCategory)}`);
 console.log(`  hospitals:   ${stats.hospitalsKept} kept, ${stats.hospitalsDroppedByName} dropped as non-casualty`);
 console.log(`  hours mapped ${counts.withHours}, complex ${stats.hoursComplex}, unknown ${stats.hoursMissing}`);
 console.log(`  open 24 h ${counts.open24h}, open at 03:30 ${counts.openAtNightRef}`);
-console.log(`  no mapped name: ${counts.namesUnmapped}`);
+console.log(`  named by brand where OpenStreetMap has no name: ${stats.namedByBrand}`);
 console.log(`  dropped: ${stats.droppedDuplicate} duplicate hospitals, ` +
   `${Object.values(stats.droppedUnnamed).reduce((a, b) => a + b, 0)} unnamed ` +
   `${JSON.stringify(stats.droppedUnnamed)}, ` +

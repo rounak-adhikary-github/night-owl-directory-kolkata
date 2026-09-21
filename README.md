@@ -7,15 +7,15 @@ built to be hosted on GitHub Pages exactly as it sits in this folder.
 
 **Every place in it is a real place, taken from OpenStreetMap.** There is no demo
 data, no generated filler and no hand-written seed list in this repository any more:
-1,611 entries, each one an actual mapped business, station or hospital with its own
-coordinates, its own OpenStreetMap id, and its own last-edit date so you can judge how
-stale it is.
+1,581 entries, each one an actual mapped business, station or hospital with its own
+**name**, its own coordinates, its own OpenStreetMap id, and its own last-edit date so
+you can judge how stale it is.
 
 ```
 index.html                 the whole app: shell, filters, map, bottom sheet
 assets/style.css           dark-first design system (tokens at the top)
 assets/app.js              Leaflet setup, filters, geolocation sort, sheet gestures
-data/locations.geojson     the dataset the app loads (1,611 places, ~980 KB)
+data/locations.geojson     the dataset the app loads (1,581 places, ~930 KB)
 tools/fetch-osm.mjs        download real places from OpenStreetMap (the only networked step)
 tools/build-locations.mjs  OpenStreetMap extract -> data/locations.geojson
 tools/hours.mjs            opening_hours reader, with its test corpus
@@ -74,25 +74,25 @@ queryable in bulk. It also happens to be the one that improves when you fix it.
 
 | Category | Places | Provably open at 03:30 | Median distance from a neighbourhood centre |
 | --- | ---: | ---: | ---: |
-| 24/7 pharmacy *(incl. 340 hospitals)* | 474 | 344 | 0.56 km |
-| Late-night food | 727 | 10 | 0.56 km |
-| Petrol pump & mechanic | 77 | 2 | 1.35 km |
+| 24/7 pharmacy *(incl. 340 hospitals)* | 462 | 344 | 0.56 km |
+| Late-night food | 704 | 10 | 0.58 km |
+| Petrol pump & mechanic | 82 | 2 | 1.29 km |
 | Transit pickup | 333 | 0 | 0.57 km |
-| **Total** | **1,611** | **356** | **0.59 km** |
+| **Total** | **1,581** | **356** | **0.59 km** |
 
 Coverage, measured against all **117** neighbourhood anchors rather than asserted:
 
 - Something open at 03:30 is within **0.59 km** of the median anchor, **1.6 km** for
-  the 90th percentile, **2.33 km** at the very worst.
-- Every one of the 117 anchors has a pharmacy **and** a food place within 2 km, except
-  three rural-ish corners for food (worst case 8 km, at the edge of the box).
-- Fuel is deliberately sparser: 77 pumps on arterials, not one per lane.
+  the 90th percentile, **2.33 km** at the very worst, and within 2 km of 113 of the 117.
+- Every one of the 117 anchors has a pharmacy within 2 km (114 of 117) and a food place
+  within 2 km (108 of 117, worst case 8 km at the edge of the box).
+- Fuel is deliberately sparser: 82 pumps and mechanics on arterials, not one per lane.
 
 ## The honest part: hours
 
 OpenStreetMap in Kolkata has excellent geometry and almost no opening hours.
-**152 of 1,611 entries carry hours this app can read**, 27 are tagged `24/7`, and
-**1,459 say "hours not listed"**. So:
+**153 of 1,581 entries carry hours this app can read**, 27 are tagged `24/7`, and
+**1,428 say "hours not listed"**. So:
 
 - The **Open-now** filter matches 356 entries — 340 of them hospitals, where a night
   casualty is a property of the hospital rather than of the mapped hours.
@@ -101,8 +101,8 @@ OpenStreetMap in Kolkata has excellent geometry and almost no opening hours.
 - Nothing is guessed to fill the gap. An entry with unreadable hours keeps the raw
   string (`"Mo-Fr 13:00-15:30,18:00-23:00"`) and is shown as *"See hours"*; an entry
   with no hours at all is shown as *"Hours not listed"* and is excluded from the
-  open-now count. The status line reports it separately: *"431 of 1611 open right
-  now, 1139 with hours unlisted."*
+  open-now count. The status line reports it separately — at 11:44 that read
+  *"438 of 1581 open right now, 1108 with hours unlisted."*
 
 This is the dataset's main weakness and it is OpenStreetMap's, not the app's. The fix
 is a five-minute edit: open any place's popup, follow **OSM entry**, sign in and add
@@ -124,15 +124,18 @@ Three judgement calls survive in the build, and each one is labelled in the data
    buildings. A hospital keeps a night casualty whether or not the mapper typed its
    hours in, so `overnight: true` puts it in the open-now count — and the popup says
    *"casualty hours not mapped"* rather than pretending the hours are known.
-2. **Unnamed places.** 35 entries have a position and no name; they are kept, shown in
-   italic as *"Eatery (name not mapped) - Behala"*, and flagged `nameUnmapped`. An
-   unnamed **hospital, pump or station** is dropped instead — at 3 AM "there is a
-   building here" is useless to give a driver.
-3. **Counts.** 29 unnamed eateries that sit within 100 m of a named one are dropped as
-   the same shop mapped twice, as are same-named entries within 60 m in one category.
-   23 entries whose mapped hours prove they shut for the whole night are dropped.
+2. **Names, or nothing.** A place with no mapped name is dropped — 105 of them, mostly
+   unnamed fuel stations and eateries. An entry listing as *"Pharmacy (name not
+   mapped)"* is not a place anyone can search for, ask a driver for, or trust, so it
+   only makes the list look longer than the city it describes. The one real name
+   available without inventing anything is `brand`: 5 pumps tagged `brand=Indian Oil`
+   or `Bharat Petroleum` are listed under the name painted on their canopy, and a
+   check in the verifier fails the build if a placeholder label ever reappears.
+3. **Counts.** Same-named entries within 60 m in one category are collapsed as one
+   shop mapped twice, and 23 entries whose mapped hours prove they shut for the whole
+   night are dropped.
 
-Places further than 7 km from any of the 117 anchors are labelled `"Kolkata"` (203 of
+Places further than 7 km from any of the 117 anchors are labelled `"Kolkata"` (201 of
 them, mostly the outer suburbs); everything else carries its nearest real
 neighbourhood, which is what makes `behala` or `new town` searchable.
 
@@ -143,19 +146,53 @@ node tools/verify-dataset.mjs
 ```
 
 Runs the opening-hours reader against 18 hand-picked cases (a window that wraps past
-midnight must be open at 02:30 and shut at noon; a split shift must be refused rather
+midnight must be open at 01:30 and shut at 02:30; a split shift must be refused rather
 than approximated) and then audits the built file: schema, bounding box, one pin per
-OpenStreetMap element, hours consistency, no unmapped-name entry that reads like a
-brand, no hospital claiming anything it is not, and the metadata counts against the
-file's own contents. Currently **34,991 checks pass, 0 fail, 3 warnings** — the
+OpenStreetMap element, hours consistency, every name a real one rather than a
+placeholder, no hospital claiming anything it is not, and the metadata counts against
+the file's own contents. Currently **34,362 checks pass, 0 fail, 3 warnings** — the
 warnings are "same first word nearby" cases like *"Wow! Momo"* and *"Wow! China
 Diner"*, which are two real brands in one food court.
 
-The browser side was checked in a real page, not by reading the code: 1,611 features
-load and cluster, a full filter rebuild takes ~108 ms, nearest-first from a simulated
+The browser side was checked in a real page, not by reading the code: 1,581 features
+load and cluster, a full filter rebuild takes ~110 ms, nearest-first from a simulated
 fix at Park Circus returns Quest Mall's food within 230 m with correct distance bands,
 `behala` returns 14 places, and there are no console errors and no failed tile
-requests.
+requests. The selection lifecycle above was driven the same way — real taps on real
+cards, a real `history.back()`, the map's own click event — with the DOM inspected
+after each step rather than the code re-read.
+
+## Getting in and out of a place (mobile)
+
+Selecting a place is the app's one interaction, so it has four ways out, and each one
+was chosen because a thumb reaches for it:
+
+| You do | What happens |
+| --- | --- |
+| Tap a card in the list | Map flies there, info card opens, **the sheet drops to its peek** so the map and the card are both on screen |
+| Tap the same card or pin again | Deselects — the card says *"Tap again to close"* while it is selected |
+| Tap the map, the card's **×**, or press <kbd>Esc</kbd> | Deselects and closes the card |
+| The phone's **back** gesture | Closes the selection and returns to the map; a second back steps to the previously selected place, and only then leaves the site |
+| Change a filter that hides the selected place | Selection clears rather than leaving a lit pin pointing at something no longer listed |
+
+Picking from the list used to leave the sheet exactly where it was — expanded, over
+the map — so tapping a place showed you nothing and left you no obvious way back. It
+also replaced the URL hash rather than pushing one, so the back gesture left the site
+instead of closing the place. Both are fixed. Each pick is now a real history entry,
+which is also what makes any place linkable (`#node-1765139024` opens it selected, with
+no extra entry stacked behind it).
+
+Two further bugs surfaced only by driving the real page:
+
+- **A crash inside Leaflet.** Rebuilding the cluster layer during a zoom animation left
+  markercluster's queue holding markers that no longer existed, and it threw
+  `Cannot use 'in' operator to search for '_leaflet_id' in undefined`. Any filter change
+  or clock tick landing mid-zoom could trigger it; the rebuild now waits for the map to
+  settle and runs once afterwards.
+- **Info cards that landed half off-screen.** The card used to open on a 720 ms
+  stopwatch, which raced the 700 ms flight: Leaflet panned the map to fit the card, then
+  the animation's final frame undid that pan. The card now opens on `moveend`, and its
+  provenance row no longer repeats what the status row already said.
 
 ## The interface
 
@@ -170,6 +207,12 @@ Dark-first, because the user is standing on a street at 3:30 AM:
   where a drop shadow would vanish.
 - 48px minimum touch targets, a draggable bottom sheet on phones that becomes a
   sidebar at ≥1000px, and keyboard access (`/` to search, `Esc` to clear).
+- The panel closes with the credit: *Created by Rounak Adhikary*, a **Buy a coffee**
+  action for UPI, and WhatsApp and Instagram links. The UPI action **copies** the
+  number rather than opening a `upi://` intent — that intent needs a full VPA
+  (`name@bank`), and all this app was given is a phone number, so guessing a suffix
+  could route money to a stranger's handle. Copying works in every UPI app and cannot
+  misroute anything.
 
 **Basemap note.** The brief said CARTO Dark Matter. Built as specified, the screenshot
 came back with `API KEY REQUIRED` stamped across every tile: CARTO now gates the
@@ -186,5 +229,6 @@ Add real places to **OpenStreetMap**, not to this repository:
 node tools/fetch-osm.mjs && node tools/build-locations.mjs && node tools/verify-dataset.mjs
 ```
 
-The most valuable contribution by far is `opening_hours` on the 1,459 entries that
-have none.
+The most valuable contribution by far is `opening_hours` on the 1,428 entries that
+have none — and adding the name to any of the 105 unnamed places that are currently
+left out, which brings them straight back into the map.

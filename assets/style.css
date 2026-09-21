@@ -333,9 +333,6 @@ a.leaflet-popup-close-button { border-radius: var(--r-md); }
   background: var(--c); box-shadow: 0 0 10px -1px var(--c);
 }
 .pop__name { margin-top: 4px; font-size: 16px; font-weight: 600; line-height: 1.25; }
-/* A place OpenStreetMap knows the position of but never gave a name: worth
-   listing, and honest about the gap rather than dressed up as a brand. */
-.pop__name--unmapped { font-weight: 500; font-style: italic; color: var(--text-2); }
 .pop__addr { margin-top: 4px; font-size: 13px; color: var(--text-2); }
 .pop__meta {
   margin-top: 10px; padding-top: 10px;
@@ -730,6 +727,23 @@ body.is-dragging .attrib { transition: none; }
   border-color: var(--c);
   box-shadow: inset 3px 0 0 var(--c);
 }
+/* The way out, written on the card itself: a selection with no visible undo reads
+   as a dead end on a phone, where the card may be most of what is on screen.
+   Present in every card and revealed by the pressed state, so it cannot drift out
+   of sync with the highlight it explains. */
+.card__close { display: none; }
+.card__hit[aria-pressed="true"] .card__close {
+  display: inline-flex;
+  margin-left: auto;
+  flex: none;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-2);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
 
 .card__badge {
   width: 40px; height: 40px;
@@ -769,7 +783,6 @@ body.is-dragging .attrib { transition: none; }
   color: var(--text);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.card__name--unmapped { font-weight: 500; font-style: italic; color: var(--text-2); }
 .card__dist {
   flex: none;
   font-size: 12.5px; font-weight: 600;
@@ -857,6 +870,82 @@ body.is-dragging .attrib { transition: none; }
   color: var(--text-2);
 }
 .legal__hint { margin: 0; }
+
+/* --- credit + support -----------------------------------------------------
+   The last thing in the panel, below the list: who made it, and three ways to
+   say thanks. Built from the same glass recipe as the FABs and chips so it reads
+   as part of the app rather than a bolted-on banner, and every target is the full
+   48px - this sits at the bottom of a phone screen, in the dark, one-handed.
+   ------------------------------------------------------------------------ */
+/* Kept deliberately short: it is pinned under a scrollable list, so every pixel
+   here is a pixel of results the user does not get. Two lines of text and a 48px
+   row, no decorative padding. */
+.support {
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px solid var(--stroke);
+}
+.support__credit {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--text-3);
+}
+.support__credit strong { color: var(--text-2); font-weight: 600; }
+.support__sub { color: var(--text-3); }
+.support__row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+/* One wide CTA that says what it does, plus two icon-only links that do not need
+   a label to be understood. */
+.support__btn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: var(--tap);
+  padding: 0 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.05);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background .16s var(--ease), border-color .16s var(--ease), transform .16s var(--ease);
+}
+.support__btn:hover { background: rgba(255, 255, 255, 0.08); border-color: var(--stroke-strong); }
+.support__btn:active { transform: translateY(1px); }
+.support__btn .ico {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.support__btn .ico__fill { fill: currentColor; stroke: none; }
+/* The coffee is the only thing here asking for money, so it is the only thing that
+   gets the accent - and in the desaturated amber, not a saturated CTA green. */
+.support__btn--coffee { flex: 1; min-width: 0; color: var(--food); border-color: rgba(255, 183, 77, 0.28); }
+.support__btn--coffee:hover { background: rgba(255, 183, 77, 0.10); border-color: rgba(255, 183, 77, 0.42); }
+.support__btn--icon { flex: none; width: var(--tap); justify-content: center; padding: 0; color: var(--text-2); }
+.support__text { display: block; min-width: 0; }
+.support__text b { display: block; font-size: 12.5px; font-weight: 600; }
+.support__meta {
+  display: block;
+  font-size: 10.5px;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .legal kbd {
   font: inherit;
   padding: 0 4px;
